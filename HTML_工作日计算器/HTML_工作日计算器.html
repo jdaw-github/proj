@@ -188,10 +188,23 @@
         }
         .schedule-btn {
             transition: all 0.3s ease;
-            border: 2px solid transparent;
+            border: 2px solid #e5e7eb;
+            background: #f9fafb;
         }
         .schedule-btn:hover {
             transform: translateY(-2px);
+            border-color: #a5b4fc;
+            background: #f0f4ff;
+        }
+        .schedule-option input[type="radio"]:checked + div {
+            border-color: #667eea;
+            background: linear-gradient(135deg, #EEF2FF 0%, #C7D2FE 100%);
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+            transform: translateY(-2px);
+        }
+        .schedule-option input[type="radio"]:checked + div span.text-sm {
+            color: #4F46E5;
+            font-weight: 600;
         }
         .schedule-btn.active {
             border-color: #667eea;
@@ -380,7 +393,7 @@
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
                     <label class="schedule-option cursor-pointer">
                         <input type="radio" name="scheduleMode" value="double" class="sr-only" checked>
-                        <div class="schedule-btn border-2 border-gray-200 rounded-xl p-4 text-center transition hover:border-indigo-400 hover:bg-indigo-50">
+                        <div class="schedule-btn rounded-xl p-4 text-center">
                             <span class="text-2xl mb-2 block">🗓️</span>
                             <span class="text-sm font-medium text-gray-700">双休</span>
                             <p class="text-xs text-gray-400 mt-1">周六日休息</p>
@@ -388,7 +401,7 @@
                     </label>
                     <label class="schedule-option cursor-pointer">
                         <input type="radio" name="scheduleMode" value="single" class="sr-only">
-                        <div class="schedule-btn border-2 border-gray-200 rounded-xl p-4 text-center transition hover:border-indigo-400 hover:bg-indigo-50">
+                        <div class="schedule-btn rounded-xl p-4 text-center">
                             <span class="text-2xl mb-2 block">📆</span>
                             <span class="text-sm font-medium text-gray-700">单休</span>
                             <p class="text-xs text-gray-400 mt-1">周日休息</p>
@@ -396,7 +409,7 @@
                     </label>
                     <label class="schedule-option cursor-pointer">
                         <input type="radio" name="scheduleMode" value="alternating" class="sr-only">
-                        <div class="schedule-btn border-2 border-gray-200 rounded-xl p-4 text-center transition hover:border-indigo-400 hover:bg-indigo-50">
+                        <div class="schedule-btn rounded-xl p-4 text-center">
                             <span class="text-2xl mb-2 block">🔄</span>
                             <span class="text-sm font-medium text-gray-700">大小周</span>
                             <p class="text-xs text-gray-400 mt-1">单双周轮换</p>
@@ -404,12 +417,19 @@
                     </label>
                     <label class="schedule-option cursor-pointer">
                         <input type="radio" name="scheduleMode" value="custom" class="sr-only">
-                        <div class="schedule-btn border-2 border-gray-200 rounded-xl p-4 text-center transition hover:border-indigo-400 hover:bg-indigo-50">
+                        <div class="schedule-btn rounded-xl p-4 text-center">
                             <span class="text-2xl mb-2 block">⚙️</span>
                             <span class="text-sm font-medium text-gray-700">自定义</span>
                             <p class="text-xs text-gray-400 mt-1">自由设置</p>
                         </div>
                     </label>
+                </div>
+
+                <div class="bg-gray-50 rounded-lg p-3 mb-4">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-500">当前排班模式：</span>
+                        <span id="currentScheduleDisplay" class="text-sm font-medium text-indigo-600">双休（周六日休息）</span>
+                    </div>
                 </div>
 
                 <div id="alternatingConfig" class="hidden bg-blue-50 rounded-lg p-4 mb-4">
@@ -656,6 +676,7 @@
             setDefaultDate();
             updateYearLabels();
             updateScheduleUI();
+            updateScheduleDisplay();
             updateLeaveDaysList();
             updateCustomDaysUI();
             updateCurrentWeekPreview();
@@ -696,16 +717,16 @@
         let HOLIDAY_INFO = {};
         
         const DEFAULT_WORKDAYS = {
-            '2024-02-04': '法定春节前补班',
-            '2024-02-18': '法定春节后补班',
-            '2024-04-28': '法定五一前补班',
-            '2024-10-07': '法定国庆后补班',
-            '2025-01-26': '法定春节前补班',
-            '2025-02-08': '法定春节后补班',
-            '2025-04-26': '法定五一前补班',
-            '2025-05-09': '法定五一后补班',
-            '2025-09-28': '法定国庆前补班',
-            '2025-10-11': '法定国庆后补班'
+            '2024-02-04': '春节调休补班',
+            '2024-02-18': '春节调休补班',
+            '2024-04-28': '五一调休补班',
+            '2024-10-07': '国庆调休补班',
+            '2025-01-26': '春节调休补班',
+            '2025-02-08': '春节调休补班',
+            '2025-04-26': '五一调休补班',
+            '2025-05-09': '五一调休补班',
+            '2025-09-28': '国庆调休补班',
+            '2025-10-11': '国庆调休补班'
         };
 
         async function loadHolidaysFromAPI(year) {
@@ -867,6 +888,7 @@
                 radio.addEventListener('change', (e) => {
                     state.scheduleMode = e.target.value;
                     updateScheduleUI();
+                    updateScheduleDisplay();
                     updateCurrentWeekPreview();
                     saveConfig();
                 });
@@ -897,6 +919,21 @@
             });
         }
 
+        function updateScheduleDisplay() {
+            const scheduleDisplay = document.getElementById('currentScheduleDisplay');
+            if (scheduleDisplay) {
+                const scheduleNames = {
+                    'double': '双休（周六日休息）',
+                    'single': '单休（周日休息）',
+                    'alternating': '大小周（单双周轮换）',
+                    'custom': '自定义（自由设置）'
+                };
+                scheduleDisplay.textContent = scheduleNames[state.scheduleMode] || '未知';
+            } else {
+                console.log('找不到 currentScheduleDisplay 元素');
+            }
+        }
+
         function updateScheduleUI() {
             const alternatingConfig = document.getElementById('alternatingConfig');
             const customConfig = document.getElementById('customConfig');
@@ -910,16 +947,7 @@
                 customConfig.classList.remove('hidden');
             }
 
-            document.querySelectorAll('.schedule-option').forEach(option => {
-                const card = option.querySelector('.schedule-card');
-                if (option.querySelector('input').checked) {
-                    card.classList.add('border-primary', 'bg-blue-50');
-                    card.classList.remove('border-gray-200');
-                } else {
-                    card.classList.remove('border-primary', 'bg-blue-50');
-                    card.classList.add('border-gray-200');
-                }
-            });
+            updateScheduleDisplay();
         }
 
         function updateCurrentWeekPreview() {
@@ -1224,7 +1252,7 @@
 
             while (workDaysCount < workDays) {
                 const dayType = getDayType(currentDate);
-                const isWork = dayType === 'work';
+                const isWork = dayType === 'work' || dayType === 'workday-makeup';
 
                 calendarDays.push({
                     date: new Date(currentDate),
