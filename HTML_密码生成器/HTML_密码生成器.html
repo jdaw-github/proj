@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>安全密码生成器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入QRCode.js库用于生成二维码 -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-purple-900 flex items-center justify-center p-4">
+    <div class="w-full max-w-md bg-white/10 backdrop-blur-lg rounded-2xl shadow-2xl p-8 border border-white/20">
+        <h1 class="text-3xl font-bold text-white text-center mb-8">🔐 安全密码生成器</h1>
+        
+        <!-- 密码显示区域 -->
+        <div class="relative mb-6">
+            <input 
+                type="text" 
+                id="password" 
+                readonly 
+                class="w-full bg-white/5 border border-white/20 rounded-lg px-4 py-3 pr-24 text-white text-lg font-mono tracking-wider focus:outline-none focus:ring-2 focus:ring-purple-500"
+                placeholder="点击生成密码"
+            >
+            <button 
+                id="copyBtn" 
+                class="absolute right-2 top-1/2 -translate-y-1/2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-1.5 rounded-md transition-all duration-200 text-sm font-medium"
+            >
+                复制
+            </button>
+        </div>
+        
+        <!-- 密码强度指示器 -->
+        <div class="mb-6">
+            <div class="flex justify-between items-center mb-2">
+                <span class="text-white/80 text-sm">密码强度</span>
+                <span id="strengthText" class="text-sm font-medium">未生成</span>
+            </div>
+            <div class="h-2 bg-white/10 rounded-full overflow-hidden">
+                <div id="strengthBar" class="h-full w-0 transition-all duration-300 rounded-full"></div>
+            </div>
+        </div>
+        
+        <!-- 密码长度设置 -->
+        <div class="mb-6">
+            <div class="flex justify-between items-center mb-2">
+                <label for="length" class="text-white/80 text-sm">密码长度</label>
+                <span id="lengthValue" class="text-orange-400 font-medium">8</span>
+            </div>
+            <input 
+                type="range" 
+                id="length" 
+                min="4" 
+                max="64" 
+                value="8" 
+                class="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-purple-600"
+            >
+        </div>
+        
+        <!-- 字符类型选项 -->
+        <div class="space-y-3 mb-6">
+            <label class="flex items-center space-x-3 cursor-pointer">
+                <input type="checkbox" id="uppercase" checked class="w-5 h-5 rounded accent-purple-600">
+                <span class="text-white/90">大写字母 (A-Z)</span>
+            </label>
+            <label class="flex items-center space-x-3 cursor-pointer">
+                <input type="checkbox" id="lowercase" checked class="w-5 h-5 rounded accent-purple-600">
+                <span class="text-white/90">小写字母 (a-z)</span>
+            </label>
+            <label class="flex items-center space-x-3 cursor-pointer">
+                <input type="checkbox" id="numbers" checked class="w-5 h-5 rounded accent-purple-600">
+                <span class="text-white/90">数字 (0-9)</span>
+            </label>
+            <label class="flex items-center space-x-3 cursor-pointer">
+                <input type="checkbox" id="commonsymbols" checked class="w-5 h-5 rounded accent-purple-600">
+                <span class="text-white/90">普通符号 (_-.)</span>
+            </label>
+            <label class="flex items-center space-x-3 cursor-pointer">
+                <input type="checkbox" id="symbols" class="w-5 h-5 rounded accent-purple-600">
+                <span class="text-white/90">特殊符号 (!@#$%^&*()_+-=[]{}|;:,.<>?)</span>
+            </label>
+            <label class="flex items-center space-x-3 cursor-pointer">
+                <input type="checkbox" id="excludeSimilar" checked class="w-5 h-5 rounded accent-purple-600">
+                <span class="text-white/90">排除相似字符 (0, O, l, 1, I)</span>
+            </label>
+        </div>
+        
+        <!-- 二维码显示区域 -->
+        <div class="mb-6 flex justify-center">
+            <div id="qrcode" class="bg-white p-2 rounded-lg shadow-lg"></div>
+        </div>
+        
+        <!-- 生成按钮 -->
+        <button 
+            id="generateBtn" 
+            class="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg"
+        >
+            生成新密码
+        </button>
+        
+        <!-- 提示信息 -->
+        <p id="message" class="text-center mt-4 text-sm text-white/70 opacity-0 transition-opacity duration-300"></p>
+    </div>
+
+    <script>
+        // 字符集定义
+        const charSets = {
+            uppercase: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+            lowercase: 'abcdefghijklmnopqrstuvwxyz',
+            numbers: '0123456789',
+            commonsymbols: '_-.',
+            symbols: '!@#$%^&*()_+-=[]{}|;:,.<>?'
+        };
+        
+        // 相似字符
+        const similarChars = '0Ool1I';
+        
+        // DOM元素
+        const passwordEl = document.getElementById('password');
+        const copyBtn = document.getElementById('copyBtn');
+        const generateBtn = document.getElementById('generateBtn');
+        const lengthEl = document.getElementById('length');
+        const lengthValueEl = document.getElementById('lengthValue');
+        const strengthBarEl = document.getElementById('strengthBar');
+        const strengthTextEl = document.getElementById('strengthText');
+        const messageEl = document.getElementById('message');
+        const qrcodeEl = document.getElementById('qrcode');
+        
+        // 更新长度显示
+        lengthEl.addEventListener('input', () => {
+            lengthValueEl.textContent = lengthEl.value;
+            generatePassword();
+        });
+        
+        // 生成密码按钮点击事件
+        generateBtn.addEventListener('click', generatePassword);
+        
+        // 复制按钮点击事件
+        copyBtn.addEventListener('click', async () => {
+            const password = passwordEl.value;
+            if (!password) return;
+            
+            try {
+                await navigator.clipboard.writeText(password);
+                showMessage('密码已复制到剪贴板！', 'text-green-400');
+            } catch (err) {
+                // 降级方案
+                passwordEl.select();
+                document.execCommand('copy');
+                showMessage('密码已复制到剪贴板！', 'text-green-400');
+            }
+        });
+        
+        // 选项变化时重新生成密码
+        document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+            checkbox.addEventListener('change', generatePassword);
+        });
+        
+        // 生成密码函数
+        function generatePassword() {
+            const length = parseInt(lengthEl.value);
+            const useUppercase = document.getElementById('uppercase').checked;
+            const useLowercase = document.getElementById('lowercase').checked;
+            const useNumbers = document.getElementById('numbers').checked;
+            const useCommonSymbols = document.getElementById('commonsymbols').checked;
+            const useSymbols = document.getElementById('symbols').checked;
+            const excludeSimilar = document.getElementById('excludeSimilar').checked;
+            
+            // 构建可用字符集
+            let availableChars = '';
+            if (useUppercase) availableChars += charSets.uppercase;
+            if (useLowercase) availableChars += charSets.lowercase;
+            if (useNumbers) availableChars += charSets.numbers;
+            if (useCommonSymbols) availableChars += charSets.commonsymbols;
+            if (useSymbols) availableChars += charSets.symbols;
+            
+            // 排除相似字符
+            if (excludeSimilar) {
+                availableChars = availableChars.split('').filter(c => !similarChars.includes(c)).join('');
+            }
+            
+            // 如果没有选择任何字符集
+            if (availableChars.length === 0) {
+                passwordEl.value = '';
+                updateStrengthIndicator(0);
+                updateQRCode('');
+                showMessage('请至少选择一种字符类型！', 'text-red-400');
+                return;
+            }
+            
+            // 使用加密安全的随机数生成器
+            const array = new Uint32Array(length);
+            crypto.getRandomValues(array);
+            
+            let password = '';
+            for (let i = 0; i < length; i++) {
+                password += availableChars[array[i] % availableChars.length];
+            }
+            
+            // 确保至少包含每种选中的字符类型
+            let guaranteedChars = '';
+            if (useUppercase) guaranteedChars += getRandomChar(charSets.uppercase, excludeSimilar);
+            if (useLowercase) guaranteedChars += getRandomChar(charSets.lowercase, excludeSimilar);
+            if (useNumbers) guaranteedChars += getRandomChar(charSets.numbers, excludeSimilar);
+            if (useCommonSymbols) guaranteedChars += getRandomChar(charSets.commonsymbols, excludeSimilar);
+            if (useSymbols) guaranteedChars += getRandomChar(charSets.symbols, excludeSimilar);
+            
+            // 替换前几个字符以确保包含所有选中类型
+            password = guaranteedChars + password.slice(guaranteedChars.length);
+            
+            // 打乱密码顺序
+            password = shuffleString(password);
+            
+            passwordEl.value = password;
+            updateStrengthIndicator(calculateStrength(password));
+            updateQRCode(password);
+        }
+        
+        // 获取随机字符
+        function getRandomChar(charSet, excludeSimilar) {
+            let filteredSet = charSet;
+            if (excludeSimilar) {
+                filteredSet = filteredSet.split('').filter(c => !similarChars.includes(c)).join('');
+            }
+            const array = new Uint32Array(1);
+            crypto.getRandomValues(array);
+            return filteredSet[array[0] % filteredSet.length];
+        }
+        
+        // 打乱字符串
+        function shuffleString(str) {
+            const array = str.split('');
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(crypto.getRandomValues(new Uint32Array(1))[0] / (0xFFFFFFFF / (i + 1)));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array.join('');
+        }
+        
+        // 计算密码强度
+        function calculateStrength(password) {
+            if (!password) return 0;
+            
+            let score = 0;
+            
+            // 长度得分
+            if (password.length >= 4) score += 1;
+            if (password.length >= 8) score += 1;
+            if (password.length >= 12) score += 1;
+            if (password.length >= 16) score += 1;
+            if (password.length >= 24) score += 1;
+            
+            // 字符类型得分
+            if (/[a-z]/.test(password)) score += 1;
+            if (/[A-Z]/.test(password)) score += 1;
+            if (/[0-9]/.test(password)) score += 1;
+            if (/[^a-zA-Z0-9]/.test(password)) score += 1;
+            
+            return score;
+        }
+        
+        // 更新强度指示器
+        function updateStrengthIndicator(score) {
+            const strengthLevels = [
+                { text: '极弱', color: 'bg-red-500', width: '20%' },
+                { text: '弱', color: 'bg-orange-500', width: '40%' },
+                { text: '中等', color: 'bg-yellow-500', width: '60%' },
+                { text: '强', color: 'bg-green-500', width: '80%' },
+                { text: '极强', color: 'bg-emerald-500', width: '100%' }
+            ];
+            
+            const level = strengthLevels[Math.min(score, strengthLevels.length - 1)];
+            
+            strengthBarEl.className = `h-full transition-all duration-300 rounded-full ${level.color}`;
+            strengthBarEl.style.width = level.width;
+            strengthTextEl.textContent = level.text;
+            strengthTextEl.className = `text-sm font-medium ${level.color.replace('bg-', 'text-')}`;
+        }
+        
+        // 更新二维码
+        function updateQRCode(text) {
+            // 清空二维码容器
+            qrcodeEl.innerHTML = '';
+            
+            if (!text) return;
+            
+            // 生成新的二维码
+            QRCode.toCanvas(text, {
+                width: 150,
+                margin: 1,
+                color: {
+                    dark: '#4c1d95', // 深紫色
+                    light: '#ffffff' // 白色
+                }
+            }, function(error, canvas) {
+                if (error) {
+                    console.error(error);
+                    return;
+                }
+                qrcodeEl.appendChild(canvas);
+            });
+        }
+        
+        // 显示消息
+        function showMessage(text, colorClass) {
+            messageEl.textContent = text;
+            messageEl.className = `text-center mt-4 text-sm ${colorClass} opacity-100 transition-opacity duration-300`;
+            
+            setTimeout(() => {
+                messageEl.classList.remove('opacity-100');
+                messageEl.classList.add('opacity-0');
+            }, 2000);
+        }
+        
+        // 页面加载时生成一个密码
+        window.addEventListener('load', generatePassword);
+    </script>
+</body>
+</html>
