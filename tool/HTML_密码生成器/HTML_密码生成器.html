@@ -4,47 +4,74 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>安全密码生成器</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%23667eea'/%3E%3Ctext x='50' y='65' font-size='50' text-anchor='middle'%3E🔐%3C/text%3E%3C/svg%3E">
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- 引入QRCode.js库用于生成二维码 -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+    <style>
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+        }
+        .gradient-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            transition: all 0.3s ease;
+        }
+        .gradient-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+    </style>
 </head>
-<body class="min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-purple-900 flex items-center justify-center p-4">
-    <div class="w-full max-w-md bg-white/10 backdrop-blur-lg rounded-2xl shadow-2xl p-8 border border-white/20">
-        <h1 class="text-3xl font-bold text-white text-center mb-8">🔐 安全密码生成器</h1>
+<body class="bg-gray-50 min-h-screen py-8 px-4">
+    <div class="w-full max-w-md mx-auto bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <div class="flex items-center justify-center gap-3 mb-6">
+            <div class="w-12 h-12 bg-gradient-to-br from-purple-100 to-purple-200 rounded-xl flex items-center justify-center">
+                <span class="text-2xl">🔐</span>
+            </div>
+            <h1 class="text-2xl font-bold text-gray-800">安全密码生成器</h1>
+        </div>
         
-        <!-- 密码显示区域 -->
         <div class="relative mb-6">
             <input 
                 type="text" 
                 id="password" 
                 readonly 
-                class="w-full bg-white/5 border border-white/20 rounded-lg px-4 py-3 pr-24 text-white text-lg font-mono tracking-wider focus:outline-none focus:ring-2 focus:ring-purple-500"
+                class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 pr-24 text-gray-800 text-lg font-mono tracking-wider focus:outline-none focus:ring-2 focus:ring-purple-500"
                 placeholder="点击生成密码"
             >
             <button 
                 id="copyBtn" 
-                class="absolute right-2 top-1/2 -translate-y-1/2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-1.5 rounded-md transition-all duration-200 text-sm font-medium"
+                class="absolute right-2 top-1/2 -translate-y-1/2 gradient-btn text-white px-4 py-1.5 rounded-md transition-all duration-200 text-sm font-medium"
             >
                 复制
             </button>
         </div>
         
-        <!-- 密码强度指示器 -->
         <div class="mb-6">
             <div class="flex justify-between items-center mb-2">
-                <span class="text-white/80 text-sm">密码强度</span>
+                <span class="text-gray-600 text-sm">密码强度</span>
                 <span id="strengthText" class="text-sm font-medium">未生成</span>
             </div>
-            <div class="h-2 bg-white/10 rounded-full overflow-hidden">
+            <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
                 <div id="strengthBar" class="h-full w-0 transition-all duration-300 rounded-full"></div>
             </div>
         </div>
         
-        <!-- 密码长度设置 -->
         <div class="mb-6">
             <div class="flex justify-between items-center mb-2">
-                <label for="length" class="text-white/80 text-sm">密码长度</label>
-                <span id="lengthValue" class="text-orange-400 font-medium">8</span>
+                <label for="length" class="text-gray-600 text-sm">密码长度</label>
+                <div class="flex items-center space-x-2">
+                    <input 
+                        type="number" 
+                        id="lengthNumber" 
+                        min="4" 
+                        max="64" 
+                        value="8"
+                        class="w-16 bg-gray-50 border border-gray-200 rounded px-2 py-1 text-purple-600 font-medium text-center focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    >
+                    <span class="text-gray-400 text-sm">位</span>
+                </div>
             </div>
             <input 
                 type="range" 
@@ -52,57 +79,66 @@
                 min="4" 
                 max="64" 
                 value="8" 
-                class="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-purple-600"
+                class="w-full h-2 bg-gray-100 rounded-lg appearance-none cursor-pointer accent-purple-600"
             >
         </div>
         
-        <!-- 字符类型选项 -->
-        <div class="space-y-3 mb-6">
-            <label class="flex items-center space-x-3 cursor-pointer">
-                <input type="checkbox" id="uppercase" checked class="w-5 h-5 rounded accent-purple-600">
-                <span class="text-white/90">大写字母 (A-Z)</span>
-            </label>
-            <label class="flex items-center space-x-3 cursor-pointer">
-                <input type="checkbox" id="lowercase" checked class="w-5 h-5 rounded accent-purple-600">
-                <span class="text-white/90">小写字母 (a-z)</span>
-            </label>
-            <label class="flex items-center space-x-3 cursor-pointer">
-                <input type="checkbox" id="numbers" checked class="w-5 h-5 rounded accent-purple-600">
-                <span class="text-white/90">数字 (0-9)</span>
-            </label>
-            <label class="flex items-center space-x-3 cursor-pointer">
-                <input type="checkbox" id="commonsymbols" checked class="w-5 h-5 rounded accent-purple-600">
-                <span class="text-white/90">普通符号 (_-.)</span>
-            </label>
-            <label class="flex items-center space-x-3 cursor-pointer">
-                <input type="checkbox" id="symbols" class="w-5 h-5 rounded accent-purple-600">
-                <span class="text-white/90">特殊符号 (!@#$%^&*()_+-=[]{}|;:,.<>?)</span>
-            </label>
-            <label class="flex items-center space-x-3 cursor-pointer">
-                <input type="checkbox" id="excludeSimilar" checked class="w-5 h-5 rounded accent-purple-600">
-                <span class="text-white/90">排除相似字符 (0, O, l, 1, I)</span>
-            </label>
+        <div class="mb-6">
+            <label class="block text-gray-600 text-sm mb-3">字符类型</label>
+            <div class="grid grid-cols-2 gap-3">
+                <label class="flex items-center space-x-2 cursor-pointer">
+                    <input type="checkbox" id="uppercase" checked class="w-4 h-4 rounded accent-purple-600">
+                    <span class="text-gray-700 text-sm">大写字母</span>
+                </label>
+                <label class="flex items-center space-x-2 cursor-pointer">
+                    <input type="checkbox" id="lowercase" checked class="w-4 h-4 rounded accent-purple-600">
+                    <span class="text-gray-700 text-sm">小写字母</span>
+                </label>
+                <label class="flex items-center space-x-2 cursor-pointer">
+                    <input type="checkbox" id="numbers" checked class="w-4 h-4 rounded accent-purple-600">
+                    <span class="text-gray-700 text-sm">数字</span>
+                </label>
+                <label class="flex items-center space-x-2 cursor-pointer">
+                    <input type="checkbox" id="commonsymbols" checked class="w-4 h-4 rounded accent-purple-600">
+                    <span class="text-gray-700 text-sm">普通符号</span>
+                </label>
+                <label class="flex items-center space-x-2 cursor-pointer">
+                    <input type="checkbox" id="symbols" class="w-4 h-4 rounded accent-purple-600">
+                    <span class="text-gray-700 text-sm">特殊符号</span>
+                </label>
+                <label class="flex items-center space-x-2 cursor-pointer">
+                    <input type="checkbox" id="excludeSimilar" checked class="w-4 h-4 rounded accent-purple-600">
+                    <span class="text-gray-700 text-sm">排除相似字符</span>
+                </label>
+            </div>
         </div>
         
-        <!-- 二维码显示区域 -->
+        <div class="mb-6">
+            <label for="accountInfo" class="block text-gray-600 text-sm mb-2">其他信息（将整合到二维码中）</label>
+            <textarea 
+                id="accountInfo" 
+                rows="3" 
+                class="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-gray-700 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
+                placeholder="格式示例：&#10;账号: example@email.com&#10;URL: https://www.example.com&#10;&#10;或直接输入其他信息"
+            ></textarea>
+            <p class="text-gray-400 text-xs mt-1">支持多行输入，用于扫码快速获取相关信息</p>
+        </div>
+        
         <div class="mb-6 flex justify-center">
-            <div id="qrcode" class="bg-white p-2 rounded-lg shadow-lg"></div>
+            <div id="qrcode" class="bg-gray-100 p-2 rounded-lg"></div>
         </div>
         
-        <!-- 生成按钮 -->
         <button 
             id="generateBtn" 
-            class="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg"
+            class="w-full gradient-btn text-white font-bold py-3 px-6 rounded-lg transition-all duration-200"
         >
             生成新密码
         </button>
         
-        <!-- 提示信息 -->
-        <p id="message" class="text-center mt-4 text-sm text-white/70 opacity-0 transition-opacity duration-300"></p>
+        <p id="message" class="text-center mt-4 text-sm text-gray-500 opacity-0 transition-opacity duration-300"></p>
     </div>
 
     <script>
-        // 字符集定义
         const charSets = {
             uppercase: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
             lowercase: 'abcdefghijklmnopqrstuvwxyz',
@@ -111,51 +147,57 @@
             symbols: '!@#$%^&*()_+-=[]{}|;:,.<>?'
         };
         
-        // 相似字符
         const similarChars = '0Ool1I';
         
-        // DOM元素
         const passwordEl = document.getElementById('password');
         const copyBtn = document.getElementById('copyBtn');
         const generateBtn = document.getElementById('generateBtn');
         const lengthEl = document.getElementById('length');
-        const lengthValueEl = document.getElementById('lengthValue');
+        const lengthNumberEl = document.getElementById('lengthNumber');
         const strengthBarEl = document.getElementById('strengthBar');
         const strengthTextEl = document.getElementById('strengthText');
         const messageEl = document.getElementById('message');
         const qrcodeEl = document.getElementById('qrcode');
+        const accountInfoEl = document.getElementById('accountInfo');
         
-        // 更新长度显示
         lengthEl.addEventListener('input', () => {
-            lengthValueEl.textContent = lengthEl.value;
+            lengthNumberEl.value = lengthEl.value;
             generatePassword();
         });
         
-        // 生成密码按钮点击事件
+        lengthNumberEl.addEventListener('input', () => {
+            let value = parseInt(lengthNumberEl.value);
+            if (isNaN(value)) value = 8;
+            value = Math.max(4, Math.min(64, value));
+            lengthNumberEl.value = value;
+            lengthEl.value = value;
+            generatePassword();
+        });
+        
+        accountInfoEl.addEventListener('input', () => {
+            updateQRCodeWithAccountInfo(passwordEl.value);
+        });
+        
         generateBtn.addEventListener('click', generatePassword);
         
-        // 复制按钮点击事件
         copyBtn.addEventListener('click', async () => {
             const password = passwordEl.value;
             if (!password) return;
             
             try {
                 await navigator.clipboard.writeText(password);
-                showMessage('密码已复制到剪贴板！', 'text-green-400');
+                showMessage('密码已复制到剪贴板！', 'text-green-500');
             } catch (err) {
-                // 降级方案
                 passwordEl.select();
                 document.execCommand('copy');
-                showMessage('密码已复制到剪贴板！', 'text-green-400');
+                showMessage('密码已复制到剪贴板！', 'text-green-500');
             }
         });
         
-        // 选项变化时重新生成密码
         document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
             checkbox.addEventListener('change', generatePassword);
         });
         
-        // 生成密码函数
         function generatePassword() {
             const length = parseInt(lengthEl.value);
             const useUppercase = document.getElementById('uppercase').checked;
@@ -165,7 +207,6 @@
             const useSymbols = document.getElementById('symbols').checked;
             const excludeSimilar = document.getElementById('excludeSimilar').checked;
             
-            // 构建可用字符集
             let availableChars = '';
             if (useUppercase) availableChars += charSets.uppercase;
             if (useLowercase) availableChars += charSets.lowercase;
@@ -173,21 +214,18 @@
             if (useCommonSymbols) availableChars += charSets.commonsymbols;
             if (useSymbols) availableChars += charSets.symbols;
             
-            // 排除相似字符
             if (excludeSimilar) {
                 availableChars = availableChars.split('').filter(c => !similarChars.includes(c)).join('');
             }
             
-            // 如果没有选择任何字符集
             if (availableChars.length === 0) {
                 passwordEl.value = '';
                 updateStrengthIndicator(0);
-                updateQRCode('');
-                showMessage('请至少选择一种字符类型！', 'text-red-400');
+                updateQRCodeWithAccountInfo('');
+                showMessage('请至少选择一种字符类型！', 'text-red-500');
                 return;
             }
             
-            // 使用加密安全的随机数生成器
             const array = new Uint32Array(length);
             crypto.getRandomValues(array);
             
@@ -196,7 +234,6 @@
                 password += availableChars[array[i] % availableChars.length];
             }
             
-            // 确保至少包含每种选中的字符类型
             let guaranteedChars = '';
             if (useUppercase) guaranteedChars += getRandomChar(charSets.uppercase, excludeSimilar);
             if (useLowercase) guaranteedChars += getRandomChar(charSets.lowercase, excludeSimilar);
@@ -204,18 +241,14 @@
             if (useCommonSymbols) guaranteedChars += getRandomChar(charSets.commonsymbols, excludeSimilar);
             if (useSymbols) guaranteedChars += getRandomChar(charSets.symbols, excludeSimilar);
             
-            // 替换前几个字符以确保包含所有选中类型
             password = guaranteedChars + password.slice(guaranteedChars.length);
-            
-            // 打乱密码顺序
             password = shuffleString(password);
             
             passwordEl.value = password;
             updateStrengthIndicator(calculateStrength(password));
-            updateQRCode(password);
+            updateQRCodeWithAccountInfo(password);
         }
         
-        // 获取随机字符
         function getRandomChar(charSet, excludeSimilar) {
             let filteredSet = charSet;
             if (excludeSimilar) {
@@ -226,7 +259,6 @@
             return filteredSet[array[0] % filteredSet.length];
         }
         
-        // 打乱字符串
         function shuffleString(str) {
             const array = str.split('');
             for (let i = array.length - 1; i > 0; i--) {
@@ -236,20 +268,17 @@
             return array.join('');
         }
         
-        // 计算密码强度
         function calculateStrength(password) {
             if (!password) return 0;
             
             let score = 0;
             
-            // 长度得分
             if (password.length >= 4) score += 1;
             if (password.length >= 8) score += 1;
             if (password.length >= 12) score += 1;
             if (password.length >= 16) score += 1;
             if (password.length >= 24) score += 1;
             
-            // 字符类型得分
             if (/[a-z]/.test(password)) score += 1;
             if (/[A-Z]/.test(password)) score += 1;
             if (/[0-9]/.test(password)) score += 1;
@@ -258,7 +287,6 @@
             return score;
         }
         
-        // 更新强度指示器
         function updateStrengthIndicator(score) {
             const strengthLevels = [
                 { text: '极弱', color: 'bg-red-500', width: '20%' },
@@ -276,20 +304,32 @@
             strengthTextEl.className = `text-sm font-medium ${level.color.replace('bg-', 'text-')}`;
         }
         
-        // 更新二维码
-        function updateQRCode(text) {
-            // 清空二维码容器
+        function updateQRCodeWithAccountInfo(password) {
             qrcodeEl.innerHTML = '';
             
-            if (!text) return;
+            const accountInfo = accountInfoEl.value.trim();
             
-            // 生成新的二维码
-            QRCode.toCanvas(text, {
+            let qrContent = '';
+            if (password) {
+                qrContent = password;
+            }
+            
+            if (accountInfo) {
+                if (qrContent) {
+                    qrContent += '\n\n' + accountInfo;
+                } else {
+                    qrContent = accountInfo;
+                }
+            }
+            
+            if (!qrContent) return;
+            
+            QRCode.toCanvas(qrContent, {
                 width: 150,
                 margin: 1,
                 color: {
-                    dark: '#4c1d95', // 深紫色
-                    light: '#ffffff' // 白色
+                    dark: '#667eea',
+                    light: '#ffffff'
                 }
             }, function(error, canvas) {
                 if (error) {
@@ -300,7 +340,6 @@
             });
         }
         
-        // 显示消息
         function showMessage(text, colorClass) {
             messageEl.textContent = text;
             messageEl.className = `text-center mt-4 text-sm ${colorClass} opacity-100 transition-opacity duration-300`;
@@ -311,7 +350,6 @@
             }, 2000);
         }
         
-        // 页面加载时生成一个密码
         window.addEventListener('load', generatePassword);
     </script>
 </body>
