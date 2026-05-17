@@ -111,23 +111,41 @@
         }
         .date-cell {
             aspect-ratio: 1;
-            min-height: 44px;
-            font-size: 13px;
+            min-height: 40px;
+            font-size: 12px;
             transition: all 0.2s ease;
             position: relative;
             overflow: hidden;
+            cursor: pointer;
+        }
+        @media (max-width: 640px) {
+            .date-cell {
+                min-height: 36px;
+                font-size: 11px;
+            }
         }
         .date-cell:hover {
-            transform: scale(1.05);
+            transform: scale(1.08);
             z-index: 10;
+        }
+        .date-cell:active {
+            transform: scale(0.98);
+        }
+        .date-cell.calculated-range {
+            box-shadow: inset 0 0 0 2px rgba(102, 126, 234, 0.4);
         }
         .calendar-month {
             background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
             border-radius: 16px;
-            padding: 20px;
+            padding: 16px;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
             border: 1px solid #f1f5f9;
             transition: all 0.3s ease;
+        }
+        @media (max-width: 640px) {
+            .calendar-month {
+                padding: 12px;
+            }
         }
         .calendar-month:hover {
             box-shadow: 0 6px 25px rgba(0, 0, 0, 0.08);
@@ -137,9 +155,21 @@
             font-weight: 600;
             color: #1e293b;
             font-size: 15px;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
             padding-bottom: 8px;
             border-bottom: 2px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        .calendar-month h4::before,
+        .calendar-month h4::after {
+            content: '';
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
         .card-hover {
             transition: all 0.3s ease;
@@ -231,8 +261,13 @@
         }
         #calendarPreview {
             display: grid;
-            grid-template-columns: repeat(2, minmax(260px, 1fr));
+            grid-template-columns: repeat(1, 1fr);
             gap: 16px;
+        }
+        @media (min-width: 640px) {
+            #calendarPreview {
+                grid-template-columns: repeat(2, minmax(260px, 1fr));
+            }
         }
         .scroll-buttons {
             position: fixed;
@@ -243,6 +278,45 @@
             flex-direction: column;
             gap: 8px;
             z-index: 1000;
+        }
+        @media (max-width: 640px) {
+            .scroll-buttons {
+                right: 10px;
+            }
+            .scroll-btn {
+                width: 36px;
+                height: 36px;
+            }
+        }
+        .leave-day-tag {
+            background: linear-gradient(135deg, #F0F4FF 0%, #E0E7FF 100%);
+            border: 1px solid #C7D2FE;
+            color: #4F46E5;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 13px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(139, 92, 246, 0.15);
+        }
+        .leave-day-tag:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25);
+        }
+        .leave-day-tag .remove-btn {
+            width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: rgba(79, 70, 229, 0.1);
+            transition: all 0.2s ease;
+        }
+        .leave-day-tag .remove-btn:hover {
+            background: rgba(79, 70, 229, 0.2);
         }
         .scroll-btn {
             width: 44px;
@@ -511,28 +585,35 @@
                     <span id="holidayStatus" class="ml-2 text-sm text-gray-500"></span>
                 </div>
 
-                <div class="bg-gray-50 rounded-lg p-4 mb-4">
-                    <label class="block text-sm font-medium text-gray-600 mb-2">添加事假/调休日期</label>
-                    <div class="flex flex-wrap items-end gap-2 mb-3">
-                        <div class="flex-1 min-w-[150px]">
-                            <label class="text-xs text-gray-500 block mb-1">开始日期</label>
-                            <input type="date" id="leaveStartDate" class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                <div class="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-4 mb-4 border border-indigo-100">
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="w-6 h-6 bg-indigo-100 rounded-full flex items-center justify-center">
+                            <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            </svg>
+                        </span>
+                        <label class="text-sm font-semibold text-indigo-800">添加事假/调休日期</label>
+                    </div>
+                    <div class="flex flex-col md:flex-row flex-wrap items-end gap-3 mb-4">
+                        <div class="flex-1 min-w-[140px] md:min-w-[180px]">
+                            <label class="text-xs text-indigo-600 block mb-1.5 font-medium">开始日期</label>
+                            <input type="date" id="leaveStartDate" class="w-full px-3 py-2.5 bg-white border border-indigo-200 rounded-lg focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition text-sm">
                         </div>
-                        <div class="flex flex-col items-center justify-end pb-2">
-                            <span class="text-gray-400">至</span>
+                        <div class="flex flex-col items-center justify-end pb-2 px-2">
+                            <span class="text-indigo-400 font-medium">至</span>
                         </div>
-                        <div class="flex-1 min-w-[150px]">
-                            <label class="text-xs text-gray-500 block mb-1">结束日期 (可选)</label>
-                            <input type="date" id="leaveEndDate" class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                        <div class="flex-1 min-w-[140px] md:min-w-[180px]">
+                            <label class="text-xs text-indigo-600 block mb-1.5 font-medium">结束日期 (可选)</label>
+                            <input type="date" id="leaveEndDate" class="w-full px-3 py-2.5 bg-white border border-indigo-200 rounded-lg focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition text-sm">
                         </div>
-                        <button onclick="addLeaveDay()" class="btn-success px-5 py-2.5 rounded-lg font-medium flex items-center gap-1">
+                        <button onclick="addLeaveDay()" class="btn-primary px-5 py-2.5 rounded-xl font-medium flex items-center gap-1.5 shadow-md hover:shadow-lg transition-all">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
                             </svg>
                             添加
                         </button>
                     </div>
-                    <div id="leaveDaysList" class="flex flex-wrap gap-2"></div>
+                    <div id="leaveDaysList" class="flex flex-wrap gap-2.5"></div>
                 </div>
             </section>
 
@@ -546,30 +627,32 @@
                     日历预览
                 </h2>
 
-                <div class="flex flex-wrap gap-4 text-sm mb-4">
-                    <div class="flex items-center gap-2">
-                        <span class="w-4 h-4 rounded work-day inline-block"></span>
-                        <span>工作日</span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <span class="w-4 h-4 rounded work-day in-range inline-block"></span>
-                        <span>覆盖工作日</span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <span class="w-4 h-4 rounded rest-day inline-block"></span>
-                        <span>休息日</span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <span class="w-4 h-4 rounded leave-day inline-block"></span>
-                        <span>事假</span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <span class="w-4 h-4 rounded holiday inline-block"></span>
-                        <span>法定假期</span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <span class="w-4 h-4 rounded makeup-work-day inline-block"></span>
-                        <span>法定调休补班</span>
+                <div class="bg-gray-50 rounded-xl p-3 mb-4">
+                    <div class="flex flex-wrap justify-center gap-3 md:gap-4 text-xs md:text-sm">
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-3.5 h-3.5 md:w-4 md:h-4 rounded work-day inline-block"></span>
+                            <span class="text-gray-600">工作日</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-3.5 h-3.5 md:w-4 md:h-4 rounded work-day in-range inline-block"></span>
+                            <span class="text-gray-600">覆盖工作日</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-3.5 h-3.5 md:w-4 md:h-4 rounded rest-day inline-block"></span>
+                            <span class="text-gray-600">休息日</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-3.5 h-3.5 md:w-4 md:h-4 rounded leave-day inline-block"></span>
+                            <span class="text-gray-600">事假</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-3.5 h-3.5 md:w-4 md:h-4 rounded holiday inline-block"></span>
+                            <span class="text-gray-600">法定假期</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-3.5 h-3.5 md:w-4 md:h-4 rounded makeup-work-day inline-block"></span>
+                            <span class="text-gray-600">调休补班</span>
+                        </div>
                     </div>
                 </div>
 
@@ -1392,8 +1475,12 @@
                     const clickHandler = (isHoliday || isMakeupDay) ? `onclick="showHolidayDetail('${dateStr}')"` : '';
                     const cursorStyle = (isHoliday || isMakeupDay) ? 'cursor-pointer' : '';
 
+                    const todayClass = isToday ? 'today-marker' : '';
+                    const isCalculatedRange = state.calculationResult && state.calculationResult.some(d => formatDate(d.date) === dateStr);
+                    const inRangeClass = isCalculatedRange ? 'calculated-range' : '';
+                    
                     dateCellsHTML += `
-                        <div class="date-cell flex flex-col items-center justify-center rounded-lg ${dayClass} ${isToday ? 'today-marker' : ''} ${cursorStyle}" title="${currentDate.getMonth() + 1}月${day}日 ${getWeekdayName(currentDate)} - ${dayTypeName}" ${clickHandler}>
+                        <div class="date-cell flex flex-col items-center justify-center rounded-lg ${dayClass} ${todayClass} ${cursorStyle} ${inRangeClass}" title="${currentDate.getMonth() + 1}月${day}日 ${getWeekdayName(currentDate)} - ${dayTypeName}" ${clickHandler}>
                             <span class="text-sm font-medium">${day}</span>
                             <span class="text-xs opacity-75">${getWeekdayName(currentDate).slice(1)}</span>
                             ${isHoliday ? '<div class="w-1.5 h-1.5 bg-red-500 rounded-full mt-0.5"></div>' : ''}
@@ -1619,7 +1706,7 @@
         function updateLeaveDaysList() {
             const container = document.getElementById('leaveDaysList');
             if (state.leaveDays.length === 0) {
-                container.innerHTML = '<p class="text-sm text-gray-400">暂无已添加的事假</p>';
+                container.innerHTML = '<p class="text-sm text-indigo-500/70 flex items-center gap-1.5"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg> 暂无已添加的事假</p>';
                 return;
             }
 
@@ -1629,11 +1716,13 @@
                 if (range.start === range.end) {
                     const date = new Date(range.start);
                     const displayDate = `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
+                    const weekday = getWeekdayName(date);
                     return `
-                        <span class="inline-flex items-center gap-1 px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-sm">
-                            ${displayDate}
-                            <button onclick="removeLeaveDay('${range.start}')" class="hover:text-amber-900">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <span class="leave-day-tag">
+                            <span class="w-1.5 h-1.5 bg-amber-500 rounded-full"></span>
+                            ${displayDate} (${weekday})
+                            <button onclick="removeLeaveDay('${range.start}')" class="remove-btn">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                                 </svg>
                             </button>
@@ -1644,11 +1733,13 @@
                     const endDate = new Date(range.end);
                     const displayStart = `${startDate.getFullYear()}/${startDate.getMonth() + 1}/${startDate.getDate()}`;
                     const displayEnd = `${endDate.getFullYear()}/${endDate.getMonth() + 1}/${endDate.getDate()}`;
+                    const daysCount = Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
                     return `
-                        <span class="inline-flex items-center gap-1 px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-sm">
-                            ${displayStart} ~ ${displayEnd}
-                            <button onclick="removeLeaveRange('${range.start}', '${range.end}')" class="hover:text-amber-900">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <span class="leave-day-tag">
+                            <span class="w-1.5 h-1.5 bg-amber-500 rounded-full"></span>
+                            ${displayStart} ~ ${displayEnd} <span class="text-xs opacity-60">(${daysCount}天)</span>
+                            <button onclick="removeLeaveRange('${range.start}', '${range.end}')" class="remove-btn">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                                 </svg>
                             </button>
