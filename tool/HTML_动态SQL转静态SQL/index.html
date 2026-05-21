@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>动态SQL转静态SQL工具</title>
+    <script src="https://unpkg.com/sql-formatter@15.3.1/dist/sql-formatter.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #1f2937;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            padding: 30px;
+            text-align: center;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .section {
+            margin-bottom: 24px;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #1f2937;
+        }
+
+        .controls {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .control-group label {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        select, input[type="text"], input[type="number"] {
+            padding: 10px 14px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        select:focus, input:focus {
+            border-color: #3b82f6;
+        }
+
+        .editor-container {
+            position: relative;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 2px solid #e5e7eb;
+        }
+
+        .editor-header {
+            background: #1e293b;
+            padding: 12px 16px;
+            color: #94a3b8;
+            font-size: 13px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 200px;
+            padding: 16px;
+            border: none;
+            font-family: 'Fira Code', 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            resize: vertical;
+            outline: none;
+            background: #0f172a;
+            color: #e2e8f0;
+        }
+
+        .output-area {
+            background: #0f172a;
+            color: #e2e8f0;
+            min-height: 200px;
+            padding: 16px;
+            font-family: 'Fira Code', 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            overflow: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .detect-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+
+        .badge-auto {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+
+        .badge-manual {
+            background: #fef3c7;
+            color: #b45309;
+        }
+
+        .params-container {
+            background: #f9fafb;
+            border-radius: 12px;
+            padding: 20px;
+            border: 2px solid #e5e7eb;
+        }
+
+        .params-container.hidden {
+            display: none;
+        }
+
+        .param-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .param-table th,
+        .param-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .param-table th {
+            font-weight: 600;
+            font-size: 14px;
+            color: #4b5563;
+        }
+
+        .param-table td {
+            font-size: 14px;
+        }
+
+        .param-input {
+            width: 100%;
+        }
+
+        .param-type-select {
+            width: 120px;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f3f4f6;
+            color: #374151;
+        }
+
+        .btn-secondary:hover {
+            background: #e5e7eb;
+        }
+
+        .btn-copy {
+            background: #10b981;
+            color: white;
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        .btn-copy:hover {
+            background: #059669;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1f2937;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            opacity: 1;
+        }
+
+        @media (max-width: 768px) {
+            .content {
+                padding: 20px;
+            }
+
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .control-group {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            select, input {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>动态SQL转静态SQL工具</h1>
+            <p>支持MySQL、PostgreSQL、Oracle、SQL Server &bull; 自动识别 sp_executesql</p>
+        </div>
+
+        <div class="content">
+            <div class="section">
+                <div class="controls">
+                    <div class="control-group">
+                        <label>数据库类型</label>
+                        <select id="dbType">
+                            <option value="mysql">MySQL</option>
+                            <option value="postgresql">PostgreSQL</option>
+                            <option value="oracle">Oracle</option>
+                            <option value="sqlserver">SQL Server</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">动态SQL输入</div>
+                <div class="editor-container">
+                    <div class="editor-header">
+                        <span>输入动态SQL</span>
+                        <span id="modeIndicator"></span>
+                    </div>
+                    <textarea id="inputSql" placeholder="粘贴动态SQL，例如 sp_executesql：&#10;exec sp_executesql N'SELECT * FROM users WHERE id = @P0', N'@P0 int', 1"></textarea>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="buttons">
+                    <button class="btn-primary" onclick="convertSql()">转换并格式化</button>
+                    <button class="btn-secondary" onclick="clearAll()">清空</button>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="params-container hidden" id="paramsContainer">
+                    <div class="section-title">参数配置</div>
+                    <table class="param-table">
+                        <thead>
+                            <tr>
+                                <th>参数名</th>
+                                <th>类型</th>
+                                <th>值</th>
+                            </tr>
+                        </thead>
+                        <tbody id="paramsBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">静态SQL输出</div>
+                <div class="editor-container">
+                    <div class="editor-header">
+                        <span>格式化结果</span>
+                        <button class="btn-copy" onclick="copyResult()">复制</button>
+                    </div>
+                    <div class="output-area" id="outputSql">等待转换...</div>
+                </div>
+            </div>
+        </div>
+        <div class="toast" id="toast"></div>
+    </div>
+
+    <script>
+        let params = [];
+        let isSpExecutesqlMode = false;
+
+        document.getElementById('inputSql').addEventListener('input', function () {
+            const sql = this.value.trim();
+            const indicator = document.getElementById('modeIndicator');
+            if (/^exec\s+sp_executesql\s+/im.test(sql)) {
+                indicator.innerHTML = '<span class="detect-badge badge-auto">自动模式</span>';
+            } else if (sql) {
+                indicator.innerHTML = '<span class="detect-badge badge-manual">手动模式</span>';
+            } else {
+                indicator.innerHTML = '';
+            }
+        });
+
+        function convertSql() {
+            const rawSql = document.getElementById('inputSql').value;
+            if (!rawSql.trim()) {
+                showToast('请先输入动态SQL');
+                return;
+            }
+
+            const dbType = document.getElementById('dbType').value;
+            const outputEl = document.getElementById('outputSql');
+            const paramsContainer = document.getElementById('paramsContainer');
+
+            if (/^exec\s+sp_executesql\s+/im.test(rawSql.trim())) {
+                isSpExecutesqlMode = true;
+                paramsContainer.classList.add('hidden');
+                convertSpExecutesql(rawSql, dbType, outputEl);
+            } else {
+                isSpExecutesqlMode = false;
+                if (params.length === 0) {
+                    params = extractGenericParams(rawSql, dbType);
+                }
+                if (params.length > 0) {
+                    renderParams();
+                    paramsContainer.classList.remove('hidden');
+                    showToast('请填写参数值后再次点击转换');
+                    return;
+                }
+                convertGenericSql(rawSql, dbType, outputEl);
+            }
+        }
+
+        function splitByGo(text) {
+            return text.split(/\n\s*go\s*(\n|$)/gi);
+        }
+
+        function convertSpExecutesql(input, dbType, outputEl) {
+            const segments = splitByGo(input);
+            const results = [];
+            let errorCount = 0;
+
+            for (const seg of segments) {
+                const trimmed = seg.trim();
+                if (!trimmed) continue;
+                try {
+                    const result = parseSpExecutesql(trimmed);
+                    if (result) {
+                        const formatted = formatSql(result.sql, dbType);
+                        results.push(formatted);
+                    } else {
+                        results.push('-- 解析失败：无法识别的 sp_executesql 格式');
+                        errorCount++;
+                    }
+                } catch (e) {
+                    results.push('-- 解析/格式化失败：' + e.message);
+                    errorCount++;
+                }
+            }
+
+            if (results.length === 0) {
+                showToast('sp_executesql 解析失败，请检查格式');
+                return;
+            }
+
+            outputEl.textContent = results.join('\n\ngo\n\n');
+            const msg = `成功转换 ${results.length - errorCount} 条语句`;
+            if (errorCount > 0) {
+                showToast(msg + `，${errorCount} 条失败`);
+            } else {
+                showToast(msg);
+            }
+        }
+
+        function parseSpExecutesql(input) {
+            const trimmed = input.trim();
+            const prefixMatch = trimmed.match(/^exec\s+sp_executesql\s+/i);
+            if (!prefixMatch) return null;
+
+            const rest = trimmed.slice(prefixMatch[0].length);
+            const args = parseNStringArgs(rest);
+            if (args.length < 2) {
+                throw new Error('sp_executesql 至少需要2个参数（SQL模板 + 参数声明）');
+            }
+
+            const template = args[0];
+            const paramDeclStr = args[1];
+            const paramValues = args.slice(2);
+
+            const paramDecls = paramDeclStr.split(',')
+                .map(s => {
+                    const m = s.trim().match(/^(@\w+)\s+(\w+)/);
+                    return m ? { name: m[1], type: m[2].toUpperCase() } : null;
+                })
+                .filter(Boolean);
+
+            const paramNames = paramDecls.map(p => p.name);
+            const numericTypes = new Set(['INT', 'BIGINT', 'SMALLINT', 'TINYINT', 'BIT', 'FLOAT', 'REAL', 'DECIMAL', 'NUMERIC', 'MONEY', 'SMALLMONEY']);
+
+            const indexedParams = paramNames.map((name, index) => ({ name, index }));
+            indexedParams.sort((a, b) => b.name.length - a.name.length);
+
+            let resultSql = unescapeSqlLiterals(template);
+            indexedParams.forEach(({ name, index }) => {
+                const value = index < paramValues.length ? paramValues[index] : '';
+                const decl = paramDecls[index];
+                const isNumeric = decl && numericTypes.has(decl.type);
+
+                let replacement;
+                if (value === 'NULL' || value === 'null') {
+                    replacement = 'NULL';
+                } else if (isNumeric) {
+                    replacement = value;
+                } else {
+                    replacement = `'${escapeSingleQuote(value)}'`;
+                }
+                const regex = new RegExp(escapeRegex(name), 'g');
+                resultSql = resultSql.replace(regex, replacement);
+            });
+
+            return { sql: resultSql, params: paramNames, values: paramValues };
+        }
+
+        function unescapeSqlLiterals(sql) {
+            let out = '';
+            let i = 0;
+            while (i < sql.length) {
+                if ((sql[i] === 'N' || sql[i] === 'n') && i + 1 < sql.length && sql[i + 1] === "'") {
+                    out += "N'";
+                    i += 2;
+                    while (i < sql.length) {
+                        if (sql[i] === "'" && i + 1 < sql.length && sql[i + 1] === "'") {
+                            const afterPair = sql.slice(i + 2).trimStart();
+                            if (/^\+ \s*@/.test(afterPair)) {
+                                out += "'";
+                                i += 2;
+                                break;
+                            }
+                            out += "''";
+                            i += 2;
+                        } else if (sql[i] === "'") {
+                            out += "'";
+                            i++;
+                            break;
+                        } else {
+                            out += sql[i];
+                            i++;
+                        }
+                    }
+                } else if (sql[i] === "'" && i + 1 < sql.length && sql[i + 1] === "'" && i + 2 < sql.length && sql[i + 2] === "'") {
+                    out += "'";
+                    i++;
+                    while (i < sql.length) {
+                        if (sql[i] === "'" && i + 1 < sql.length && sql[i + 1] === "'") {
+                            out += "''";
+                            i += 2;
+                        } else if (sql[i] === "'") {
+                            out += "'";
+                            i++;
+                            break;
+                        } else {
+                            out += sql[i];
+                            i++;
+                        }
+                    }
+                } else if (sql[i] === "'" && i + 1 < sql.length && sql[i + 1] === "'") {
+                    out += "'";
+                    i += 2;
+                } else if (sql[i] === "'") {
+                    out += "'";
+                    i++;
+                    while (i < sql.length) {
+                        if (sql[i] === "'" && i + 1 < sql.length && sql[i + 1] === "'") {
+                            out += "''";
+                            i += 2;
+                        } else if (sql[i] === "'") {
+                            out += "'";
+                            i++;
+                            break;
+                        } else {
+                            out += sql[i];
+                            i++;
+                        }
+                    }
+                } else if (sql[i] === '-' && i + 1 < sql.length && sql[i + 1] === '-') {
+                    const nl = sql.indexOf('\n', i);
+                    const end = nl === -1 ? sql.length : nl;
+                    out += sql.slice(i, end);
+                    i = end;
+                } else {
+                    out += sql[i];
+                    i++;
+                }
+            }
+            return out;
+        }
+
+        function parseNStringArgs(text) {
+            const args = [];
+            let i = 0;
+            while (i < text.length) {
+                while (i < text.length && (text[i] === ' ' || text[i] === ',' || text[i] === '\t' || text[i] === '\n' || text[i] === '\r')) {
+                    i++;
+                }
+                if (i >= text.length) break;
+
+                const result = parseValueToken(text, i);
+                if (result) {
+                    args.push(result.value);
+                    i = result.endIndex;
+                } else {
+                    break;
+                }
+            }
+            return args;
+        }
+
+        function parseValueToken(text, start) {
+            const namedMatch = text.slice(start).match(/^@\w+=\s*/);
+            if (namedMatch) {
+                const vStart = start + namedMatch[0].length;
+                const result = parseValueToken(text, vStart);
+                if (result) {
+                    return { value: result.value, endIndex: result.endIndex };
+                }
+                return null;
+            }
+
+            const nOrPlain = parseNOrPlainString(text, start);
+            if (nOrPlain) return nOrPlain;
+
+            const nullMatch = text.slice(start).match(/^NULL\b/i);
+            if (nullMatch) {
+                return { value: 'NULL', endIndex: start + nullMatch[0].length };
+            }
+
+            const wordMatch = text.slice(start).match(/^[^\s,)]+/);
+            if (wordMatch) {
+                return { value: wordMatch[0], endIndex: start + wordMatch[0].length };
+            }
+
+            return null;
+        }
+
+        function parseNOrPlainString(text, start) {
+            if (text[start] === 'N' && text[start + 1] === "'") {
+                return parseQuotedString(text, start + 2, "'");
+            }
+            if (text[start] === "'") {
+                return parseQuotedString(text, start + 1, "'");
+            }
+            return null;
+        }
+
+        function parseQuotedString(text, start, quote) {
+            let result = '';
+            let i = start;
+            while (i < text.length) {
+                if (text[i] === quote) {
+                    if (i + 1 < text.length && text[i + 1] === quote) {
+                        result += quote;
+                        i += 2;
+                    } else {
+                        return { value: result, endIndex: i + 1 };
+                    }
+                } else {
+                    result += text[i];
+                    i++;
+                }
+            }
+            throw new Error('未闭合的引号字符串');
+        }
+
+        function convertGenericSql(sql, dbType, outputEl) {
+            try {
+                let resultSql = sql;
+                const formatted = formatSql(resultSql, dbType);
+                outputEl.textContent = formatted;
+                showToast('转换成功！');
+            } catch (e) {
+                showToast('格式化失败：' + e.message);
+            }
+        }
+
+        function extractGenericParams(sql, dbType) {
+            const found = [];
+            let questionIndex = 0;
+            const seenNamed = new Set();
+
+            const cleaned = sql.replace(/'[^']*'|"[^"]*"/g, m => ' '.repeat(m.length));
+            const regex = /(:\w+|@\w+|\$\w+|\?)/g;
+            let m;
+            while ((m = regex.exec(cleaned)) !== null) {
+                const orig = m[0];
+                let name;
+                if (orig === '?') {
+                    name = `param_${questionIndex++}`;
+                    found.push({ name, original: orig, type: 'string', value: '' });
+                } else {
+                    if (!seenNamed.has(orig)) {
+                        seenNamed.add(orig);
+                        found.push({ name: orig, original: orig, type: 'string', value: '' });
+                    }
+                }
+            }
+            return found;
+        }
+
+        function renderParams() {
+            const tbody = document.getElementById('paramsBody');
+            tbody.innerHTML = '';
+            params.forEach((param, index) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><code>${param.name}</code></td>
+                    <td>
+                        <select class="param-type-select" onchange="updateParamType(${index}, this.value)">
+                            <option value="string">字符串</option>
+                            <option value="number">数字</option>
+                            <option value="null">NULL</option>
+                            <option value="date">日期</option>
+                        </select>
+                    </td>
+                    <td><input type="text" class="param-input" placeholder="输入值" oninput="updateParamValue(${index}, this.value)"></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function updateParamType(index, type) {
+            params[index].type = type;
+            applyConversionWithParams();
+        }
+
+        function updateParamValue(index, value) {
+            params[index].value = value;
+            applyConversionWithParams();
+        }
+
+        function applyConversionWithParams() {
+            const sql = document.getElementById('inputSql').value;
+            if (!sql.trim()) return;
+            const dbType = document.getElementById('dbType').value;
+            const outputEl = document.getElementById('outputSql');
+
+            let resultSql = sql;
+            let qi = 0;
+            const parts = [];
+            let last = 0;
+            const regex = /(:\w+|@\w+|\$\w+|\?)/g;
+            let m;
+            while ((m = regex.exec(sql)) !== null) {
+                parts.push(sql.slice(last, m.index));
+                let param = params.find(p => p.original === m[0]);
+                if (m[0] === '?') param = params[qi++];
+                parts.push(param ? formatValue(param, dbType) : m[0]);
+                last = m.index + m[0].length;
+            }
+            parts.push(sql.slice(last));
+            resultSql = parts.join('');
+
+            try {
+                outputEl.textContent = formatSql(resultSql, dbType);
+            } catch (e) {
+                outputEl.textContent = resultSql;
+            }
+        }
+
+        function formatValue(param, dbType) {
+            if (param.type === 'null') return 'NULL';
+            if (param.type === 'number') return param.value || 'NULL';
+            if (param.type === 'date') {
+                if (dbType === 'oracle') return `TO_DATE('${param.value}', 'YYYY-MM-DD')`;
+            }
+            return `'${escapeSingleQuote(param.value)}'`;
+        }
+
+        function escapeSingleQuote(str) {
+            return (str || '').replace(/'/g, "''");
+        }
+
+        function escapeRegex(str) {
+            return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+
+        function formatSql(sql, dbType) {
+            if (typeof window.sqlFormatter !== 'undefined' && window.sqlFormatter.format) {
+                try {
+                    const langMap = { mysql: 'mysql', postgresql: 'postgresql', oracle: 'sql', sqlserver: 'tsql' };
+                    return window.sqlFormatter.format(sql, {
+                        language: langMap[dbType] || 'sql',
+                        indent: '\t'
+                    });
+                } catch (e) {
+                    return sql;
+                }
+            }
+            return sql;
+        }
+
+        function copyResult() {
+            const text = document.getElementById('outputSql').textContent;
+            if (text === '等待转换...') {
+                showToast('没有可复制的内容');
+                return;
+            }
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('已复制到剪贴板！');
+            }).catch(() => {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                showToast('已复制到剪贴板！');
+            });
+        }
+
+        function clearAll() {
+            document.getElementById('inputSql').value = '';
+            document.getElementById('outputSql').textContent = '等待转换...';
+            document.getElementById('paramsContainer').classList.add('hidden');
+            document.getElementById('modeIndicator').innerHTML = '';
+            params = [];
+            isSpExecutesqlMode = false;
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2000);
+        }
+    </script>
+</body>
+</html>

@@ -1,644 +1,577 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>小米运动截图生成器</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-        
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-        }
-        
-        .form-section {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 30px;
-            color: #fff;
-        }
-        
-        .form-section h2 {
-            font-size: 24px;
-            margin-bottom: 25px;
-            color: #ff6b35;
-            border-bottom: 2px solid rgba(255, 107, 53, 0.3);
-            padding-bottom: 15px;
-        }
-        
-        .form-group {
-            margin-bottom: 20px;
-        }
-        
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-size: 14px;
-            color: rgba(255, 255, 255, 0.8);
-        }
-        
-        .form-group input,
-        .form-group select {
-            width: 100%;
-            padding: 12px 15px;
-            border: none;
-            border-radius: 10px;
-            background: rgba(255, 255, 255, 0.15);
-            color: #fff;
-            font-size: 16px;
-            outline: none;
-            transition: background 0.3s;
-        }
-        
-        .form-group input:focus,
-        .form-group select:focus {
-            background: rgba(255, 255, 255, 0.25);
-        }
-        
-        .form-group input::placeholder {
-            color: rgba(255, 255, 255, 0.5);
-        }
-        
-        .avatar-upload {
-            position: relative;
-            width: 120px;
-            height: 120px;
-            border-radius: 50%;
-            overflow: hidden;
-            background: rgba(255, 255, 255, 0.1);
-            cursor: pointer;
-            margin-bottom: 10px;
-        }
-        
-        .avatar-upload img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        
-        .avatar-upload input {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            opacity: 0;
-            cursor: pointer;
-        }
-        
-        .avatar-upload:hover {
-            background: rgba(255, 255, 255, 0.2);
-        }
-        
-        .bg-upload {
-            position: relative;
-            width: 100%;
-            height: 120px;
-            border-radius: 15px;
-            overflow: hidden;
-            background: rgba(255, 255, 255, 0.1);
-            cursor: pointer;
-            margin-bottom: 10px;
-        }
-        
-        .bg-upload img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        
-        .bg-upload input {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            opacity: 0;
-            cursor: pointer;
-        }
-        
-        .bg-upload:hover {
-            background: rgba(255, 255, 255, 0.2);
-        }
-        
-        .bg-upload-text {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: rgba(255, 255, 255, 0.6);
-            text-align: center;
-            font-size: 14px;
-            pointer-events: none;
-        }
-        
-        .btn {
-            width: 100%;
-            padding: 15px;
-            border: none;
-            border-radius: 10px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s;
-            margin-top: 20px;
-        }
-        
-        .btn-primary {
-            background: linear-gradient(135deg, #ff6b35 0%, #f7c59f 100%);
-            color: #1a1a2e;
-        }
-        
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(255, 107, 53, 0.4);
-        }
-        
-        .preview-section {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        
-        .preview-section h2 {
-            color: #fff;
-            margin-bottom: 20px;
-            font-size: 24px;
-        }
-        
-        .screenshot-container {
-            width: 360px;
-            height: 640px;
-            position: relative;
-            border-radius: 40px;
-            overflow: hidden;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-        }
-        
-        .screenshot {
-            width: 100%;
-            height: 100%;
-            position: relative;
-            background: url('https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?w=360&h=640&fit=crop') no-repeat center center;
-            background-size: cover;
-        }
-        
-        .screenshot-header {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            padding: 28px 22px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .app-name {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            color: #fff;
-            font-size: 19px;
-            font-weight: 600;
-        }
-        
-        .app-icon {
-            width: 28px;
-            height: 28px;
-            background: #ff6b35;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #fff;
-            font-size: 14px;
-            font-weight: bold;
-        }
-        
-        .qr-code {
-            width: 45px;
-            height: 45px;
-            background: #fff;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .qr-code img {
-            width: 40px;
-            height: 40px;
-        }
-        
-        .user-info {
-            position: absolute;
-            bottom: 200px;
-            left: 28px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-        
-        .user-avatar-wrapper {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        
-        .user-avatar {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            overflow: hidden;
-            background: #fff;
-        }
-        
-        .user-avatar img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        
-        .user-name {
-            color: #fff;
-            font-size: 19px;
-            font-weight: 600;
-        }
-        
-        .user-date {
-            color: rgba(255, 255, 255, 0.75);
-            font-size: 13px;
-            margin-top: -4px;
-        }
-        
-        .stats-area {
-            position: absolute;
-            bottom: 30px;
-            left: 28px;
-            right: 28px;
-        }
-        
-        .bottom-stats {
-            display: flex;
-            gap: 45px;
-            margin-bottom: 12px;
-        }
-        
-        .stat-item {
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .stat-value {
-            color: #fff;
-            font-size: 30px;
-            font-weight: 700;
-            letter-spacing: -1px;
-        }
-        
-        .stat-label {
-            color: rgba(255, 255, 255, 0.6);
-            font-size: 12px;
-            margin-top: 3px;
-            font-weight: 400;
-        }
-        
-        .distance-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-            margin-top: 15px;
-        }
-        
-        .distance-section {
-            display: flex;
-            align-items: baseline;
-        }
-        
-        .distance-value {
-            color: #fff;
-            font-size: 85px;
-            font-weight: 700;
-            line-height: 0.9;
-            letter-spacing: -3px;
-        }
-        
-        .distance-unit {
-            color: rgba(255, 255, 255, 0.85);
-            font-size: 24px;
-            font-weight: 500;
-            margin-left: 8px;
-            margin-bottom: 8px;
-        }
-        
-        .heart-rate-section {
-            width: 145px;
-            height: 65px;
-            position: relative;
-            background: rgba(0, 0, 0, 0.45);
-            border-radius: 12px;
-            display: flex;
-            align-items: flex-end;
-            justify-content: flex-start;
-            padding: 8px;
-        }
-        
-        .heart-rate-label {
-            position: absolute;
-            top: 6px;
-            right: 10px;
-            color: rgba(255, 255, 255, 0.55);
-            font-size: 11px;
-            font-weight: 400;
-        }
-        
-        .heart-rate-canvas {
-            width: 100%;
-            height: 42px;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>小米运动截图生成器</title>
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --phone-w: 420px;
+      --phone-h: 747px;
+      --accent: #ff6a2a;
+      --panel: rgba(255, 255, 255, .9);
+      --text: #121826;
+    }
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--text);
+      background: radial-gradient(circle at top left, #fff4eb 0, transparent 32%), linear-gradient(135deg, #edf2ff, #f8fafc 58%, #fff7ed);
+    }
+    .app {
+      width: 100vw;
+      height: 100vh;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      grid-template-columns: minmax(420px, 46vw) 1fr;
+      gap: 0;
+      align-items: stretch;
+    }
+    .preview-wrap, .editor {
+      border-radius: 0;
+      background: rgba(255, 255, 255, .72);
+      border: 0;
+      box-shadow: none;
+      backdrop-filter: blur(18px);
+      height: 100vh;
+      overflow: auto;
+    }
+    .preview-wrap {
+      padding: 24px;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .phone {
+      position: relative;
+      /* width: var(--phone-w); */
+      height: 100%;
+      aspect-ratio: 9/16;
+      flex: 0 0 auto;
+      overflow: hidden;
+      /* border-radius: 28px; */
+      color: #fff;
+      background: #09111f;
+      box-shadow: 0 24px 60px rgba(15, 23, 42, .28), inset 0 0 0 10px rgba(15,23,42,.92), inset 0 0 0 12px rgba(255,255,255,.08);
+      transform-origin: top center;
+      /* background-image: url(./1.jpg); */
+     
+    }
+    .phone-bg {
+      position: absolute;
+      inset: 0;
+      background-image: var(--bg-image);
+      background-size: cover;
+      /* background-image: url(./1.jpg);
+background-size: 100% 100%; */
 
-        .calories-value {
-            color: rgba(255, 255, 255, 0.75);
-            font-size: 30px;
-            font-weight: 700;
-        }
-        
-        @media (max-width: 900px) {
-            .container {
-                grid-template-columns: 1fr;
-            }
-            
-            .preview-section {
-                order: -1;
-            }
-        }
-    </style>
+      background-position: center;
+      background-repeat: no-repeat;
+    }
+    /* .phone::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(11,20,43,.12), rgba(0,0,0,.18) 48%, rgba(0,0,0,.72));
+      pointer-events: none;
+    } */
+    .brand, .qr, .user-block, .stats, .distance, .chart-block { position: absolute; z-index: 2; }
+    .brand {
+      left: 24px;
+      top: 28px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: .5px;
+    }
+    .mi-logo {
+      width: 36px;
+      height: 36px;
+      border-radius: 7px;
+      background: #fff;
+      display: grid;
+      place-items: center;
+      box-shadow: 0 0 0 3px rgba(255,255,255,.95);
+    }
+    .mi-logo::before {
+      content: "";
+      width: 12px;
+      height: 12px;
+      border: 3px solid #f05a28;
+      border-radius: 50%;
+    }
+    .qr {
+      right: 28px;
+      top: 22px;
+      width:55px;
+      height:55px;
+      background: #fff;
+      background: url(./img/qrcode.png);
+      background-size: 100% 100%;
+      padding: 2px;
+    }
+    /* .qr-grid {
+      width: 100%;
+      height: 100%;
+      background-image:
+        linear-gradient(90deg, #111 50%, transparent 50%),
+        linear-gradient(#111 50%, transparent 50%);
+      background-size: 7px 7px;
+      opacity: .92;
+      position: relative;
+    }
+    .qr-grid::after {
+      content: "";
+      position: absolute;
+      left: 15px;
+      top: 15px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #f05a28;
+      border: 2px solid #fff;
+    } */
+    .user-block {
+      left: 24px;
+      bottom: 210px;
+    }
+    .avatar {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: #fff;
+      border: 2px solid #fff;
+      object-fit: cover;
+      display: block;
+      margin-bottom: 18px;
+    }
+    .name {
+      font-size: 17px;
+      line-height: 1.1;
+      font-weight: bold;
+      text-shadow: 0 2px 10px rgba(0,0,0,.45);
+    }
+    .meta {
+      margin-top: 5px;
+      font-size: 12px;
+      font-weight: bold;
+      color: rgba(255,255,255,.84);
+    }
+    .stats {
+      left: 24px;
+      right: 80px;
+      bottom: 150px;
+      display: grid;
+      grid-template-columns: 1.3fr 2fr;
+      gap: 28px;
+    }
+    .value {
+      font-size: 20px;
+      font-weight: bold;
+      line-height: 1;
+
+    }
+    .value .unit { font-size: 18px; color: rgba(255,255,255,.78); }
+    .label {
+      margin-top: 8px;
+      font-size: 12px;
+      color: rgba(255,255,255,.82);
+      /* font-weight: 800; */
+    }
+    .distance {
+      left: 24px;
+      bottom: 48px;
+      display: flex;
+      align-items: baseline;
+      gap: 24px;
+    }
+    .distance .num {
+      font-size: 68px;
+      line-height: .9;
+      font-weight: bold;
+      letter-spacing: -2px;
+      transform: scaleY(1.2);
+      transform-origin: bottom;
+    }
+    .distance .km { font-size: 24px; font-weight: 500; }
+    .chart-block {
+      right: 52px;
+      bottom: 32px;
+      width: 92px;
+      height: 58px;
+    }
+    .chart-title {
+      position: absolute;
+      right: -12px;
+      top: -28px;
+      font-size: 14px;
+      font-weight: 900;
+      color: rgba(255,255,255,.42);
+    }
+    #heartChart { width: 100%; height: 100%; }
+    .editor {
+      padding: 28px;
+      min-width: 0;
+    }
+    .editor h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+      letter-spacing: -1px;
+    }
+    .editor p {
+      margin: 0 0 22px;
+      color: #64748b;
+      line-height: 1.7;
+    }
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+    .field { display: flex; flex-direction: column; gap: 8px; }
+    .field.full { grid-column: 1 / -1; }
+    label { font-size: 13px; font-weight: 800; color: #334155; }
+    input, select, button {
+      width: 100%;
+      min-height: 44px;
+      border: 1px solid #dbe3ef;
+      border-radius: 14px;
+      padding: 10px 13px;
+      font: inherit;
+      background: rgba(255,255,255,.92);
+      outline: none;
+      transition: .2s ease;
+    }
+    input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(255,106,42,.12); }
+    input[type="file"] { padding: 9px; font-size: 13px; }
+    .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 22px; }
+    button {
+      cursor: pointer;
+      border: 0;
+      font-weight: 900;
+      color: #fff;
+      background: linear-gradient(135deg, #ff7a2f, #ef3f20);
+      box-shadow: 0 14px 28px rgba(239, 63, 32, .22);
+    }
+    button.secondary { color: #0f172a; background: #fff; border: 1px solid #e2e8f0; box-shadow: none; }
+    .hint { margin-top: 16px; font-size: 12px; color: #64748b; }
+    @media (max-width: 940px) {
+      .app { grid-template-columns: 1fr; }
+      .preview-wrap, .editor { height: 50vh; }
+      .preview-wrap { align-items: center; }
+      .phone { width: min(420px, 92vw); height: min(747px, 46vh); }
+      .editor { width: 100%; }
+    }
+    @media (max-width: 500px) {
+      .preview-wrap, .editor { height: auto; min-height: 50vh; }
+      .phone { width: min(420px, 92vw); height: min(747px, 48vh); }
+      .form-grid { grid-template-columns: 1fr; }
+      .actions { grid-template-columns: 1fr; }
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <div class="form-section">
-            <h2>编辑运动信息</h2>
-            
-            <div class="form-group">
-                <label>头像</label>
-                <div class="avatar-upload" id="avatarUpload">
-                    <img id="avatarPreview" src="https://neeko-copilot.bytedance.net/api/text_to_image?prompt=cute%20white%20cat%20face%20cartoon%20style%20simple&image_size=square" alt="头像">
-                    <input type="file" id="avatarInput" accept="image/*">
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label>背景图片</label>
-                <div class="bg-upload" id="bgUpload">
-                    <img id="bgPreview" src="https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?w=360&h=640&fit=crop" alt="背景">
-                    <span class="bg-upload-text" id="bgUploadText">点击上传背景图片</span>
-                    <input type="file" id="bgInput" accept="image/*">
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label>用户姓名</label>
-                <input type="text" id="userName" placeholder="请输入姓名" value="为何？">
-            </div>
-            
-            <div class="form-group">
-                <label>运动日期</label>
-                <input type="text" id="sportDate" placeholder="如：2021年10月3日" value="2021年10月3日">
-            </div>
-            
-            <div class="form-group">
-                <label>运动类型</label>
-                <select id="sportType">
-                    <option value="户外跑步">户外跑步</option>
-                    <option value="室内跑步">室内跑步</option>
-                    <option value="骑行">骑行</option>
-                    <option value="步行">步行</option>
-                    <option value="游泳">游泳</option>
-                    <option value="健身">健身</option>
-                </select>
-            </div>
-            
-            <div class="form-group">
-                <label>运动距离（km）</label>
-                <input type="number" id="distance" step="0.01" placeholder="请输入距离" value="1.01">
-            </div>
-            
-            <div class="form-group">
-                <label>运动时长</label>
-                <input type="text" id="duration" placeholder="如：00:08:49" value="00:08:49">
-            </div>
-            
-            <div class="form-group">
-                <label>活动卡路里（kcal）</label>
-                <input type="number" id="calories" placeholder="请输入卡路里" value="59">
-            </div>
-            
-            <button class="btn btn-primary" onclick="generateHeartRate()">重新生成心率图</button>
-            <button class="btn btn-primary" onclick="downloadImage()">下载截图</button>
+  <main class="app">
+    <section class="preview-wrap" aria-label="截图预览">
+      <div id="capture" class="phone">
+        <div class="phone-bg"></div>
+        <div class="brand"><span class="mi-logo"></span><span>小米运动健康</span></div>
+        <div class="qr"><div class="qr-grid"></div></div>
+        <div class="user-block">
+          <img id="avatarPreview" class="avatar" alt="头像" />
+          <div id="namePreview" class="name">为何?</div>
+          <div class="meta"><span id="datePreview">2024年10月10日</span>&nbsp; <span id="typePreview">户外跑步</span></div>
         </div>
-        
-        <div class="preview-section">
-            <h2>预览效果</h2>
-            <div class="screenshot-container" id="screenshot">
-                <div class="screenshot">
-                    <div class="screenshot-header">
-                        <div class="app-name">
-                            <div class="app-icon">米</div>
-                            <span>小米运动健康</span>
-                        </div>
-                        <div class="qr-code">
-                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=40x40&data=xiaomi" alt="二维码">
-                        </div>
-                    </div>
-                    
-                    <div class="user-info">
-                        <div class="user-avatar-wrapper">
-                            <div class="user-avatar">
-                                <img id="previewAvatar" src="https://neeko-copilot.bytedance.net/api/text_to_image?prompt=cute%20white%20cat%20face%20cartoon%20style%20simple&image_size=square" alt="用户头像">
-                            </div>
-                            <div class="user-name" id="previewName">为何？</div>
-                        </div>
-                        <div class="user-date" id="previewDate">2021年10月3日 户外跑步</div>
-                    </div>
-                    
-                    <div class="stats-area">
-                        <div class="bottom-stats">
-                            <div class="stat-item">
-                                <div class="stat-value" id="previewDuration">00:08:49</div>
-                                <div class="stat-label">运动时长</div>
-                            </div>
-                            <div class="stat-item">
-                                <div class="stat-value calories-value" id="previewCalories">59</div>
-                                <div class="stat-label">活动卡路里</div>
-                            </div>
-                        </div>
-                        
-                        <div class="distance-row">
-                            <div class="distance-section">
-                                <span class="distance-value" id="previewDistance">1.01</span>
-                                <span class="distance-unit">km</span>
-                            </div>
-                            <div class="heart-rate-section">
-                                <span class="heart-rate-label">心率</span>
-                                <canvas class="heart-rate-canvas" id="heartRateCanvas"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <div class="stats">
+          <div>
+            <div id="durationPreview" class="value">00:16:07</div>
+            <div class="label">运动时长</div>
+          </div>
+          <div>
+            <div class="value"><span id="caloriePreview">132</span><span class="unit">kcal</span></div>
+            <div id="calorieLabelPreview" class="label">活动卡路里</div>
+          </div>
         </div>
-    </div>
+        <div class="distance"><span id="distancePreview" class="num">2.11</span><span class="km">km</span></div>
+        <div class="chart-block"><div class="chart-title">心率</div><canvas id="heartChart" width="184" height="116"></canvas></div>
+      </div>
+    </section>
 
-    <script>
-        const avatarInput = document.getElementById('avatarInput');
-        const avatarPreview = document.getElementById('avatarPreview');
-        const previewAvatar = document.getElementById('previewAvatar');
-        const bgInput = document.getElementById('bgInput');
-        const bgPreview = document.getElementById('bgPreview');
-        const bgUploadText = document.getElementById('bgUploadText');
-        const screenshot = document.querySelector('.screenshot');
-        
-        avatarInput.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    avatarPreview.src = e.target.result;
-                    previewAvatar.src = e.target.result;
-                };
-                reader.readAsDataURL(file);
-            }
-        });
-        
-        bgInput.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    bgPreview.src = e.target.result;
-                    screenshot.style.backgroundImage = `url('${e.target.result}')`;
-                    bgUploadText.style.display = 'none';
-                };
-                reader.readAsDataURL(file);
-            }
-        });
-        
-        document.getElementById('userName').addEventListener('input', function(e) {
-            document.getElementById('previewName').textContent = e.target.value || '为何？';
-        });
-        
-        document.getElementById('sportDate').addEventListener('input', function(e) {
-            updateDate();
-        });
-        
-        document.getElementById('sportType').addEventListener('change', function(e) {
-            updateDate();
-        });
-        
-        function updateDate() {
-            const date = document.getElementById('sportDate').value || '2021年10月3日';
-            const type = document.getElementById('sportType').value;
-            document.getElementById('previewDate').textContent = `${date} ${type}`;
+    <aside class="editor">
+      <h1>小米运动截图生成器</h1>
+      <p>左侧实时预览移动端截图，右侧可编辑运动信息、上传背景和头像，点击下载即可导出与预览一致的图片。</p>
+      <div class="form-grid">
+        <div class="field">
+          <label for="sportType">运动类型</label>
+          <input id="sportType" type="text" value="户外跑步" placeholder="请输入运动类型" />
+        </div>
+        <div class="field">
+          <label for="userName">用户姓名</label>
+          <input id="userName" value="为何?" />
+        </div>
+        <div class="field">
+          <label for="sportDate">运动日期</label>
+          <input id="sportDate" type="date" value="2024-10-10" />
+        </div>
+        <div class="field">
+          <label for="distance">运动距离</label>
+          <div style="display:grid;grid-template-columns:1fr 110px;gap:10px;">
+            <input id="distance" type="number" min="0" step="0.01" value="2.11" />
+            <input id="distanceUnit" type="text" value="km" placeholder="单位" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="duration">运动时长</label>
+          <input id="duration" value="00:16:07" placeholder="00:16:07" />
+        </div>
+        <div class="field">
+          <label for="calorie">活动指标</label>
+          <div style="display:grid;grid-template-columns:1fr 140px;gap:10px;">
+            <input id="calorie" type="number" min="0" step="1" value="132" />
+            <input id="calorieLabel" type="text" value="活动卡路里" placeholder="名称" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="calorieUnit">指标单位</label>
+          <input id="calorieUnit" type="text" value="bpm" placeholder="单位" />
+        </div>
+        <div class="field full">
+          <label for="bgUpload">背景图片（不上传则使用默认星空图）</label>
+          <input id="bgUpload" type="file" accept="image/*" />
+        </div>
+        <div class="field full">
+          <label for="avatarUpload">头像</label>
+          <input id="avatarUpload" type="file" accept="image/*" />
+        </div>
+      </div>
+      <div class="actions">
+        <button id="randomChart" type="button" class="secondary">随机心率图</button>
+        <button id="download" type="button">下载图片</button>
+      </div>
+      <div class="hint">建议上传竖版背景图，导出尺寸为 420 × 747，可直接用于手机分享。</div>
+    </aside>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script>
+    const defaultBg = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="840" height="1494" viewBox="0 0 840 1494">
+        <defs>
+          <linearGradient id="sky" x1="0" x2="0" y1="0" y2="1"><stop stop-color="#0b1630"/><stop offset=".52" stop-color="#293562"/><stop offset="1" stop-color="#020409"/></linearGradient>
+          <radialGradient id="glow" cx="36%" cy="48%" r="38%"><stop stop-color="#a98ccb" stop-opacity=".45"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+          <filter id="blur"><feGaussianBlur stdDeviation="2.4"/></filter>
+        </defs>
+        <rect width="840" height="1494" fill="url(#sky)"/>
+        <rect width="840" height="1494" fill="url(#glow)"/>
+        <g fill="#fff" opacity=".88">
+          ${Array.from({length: 260}, (_, i) => `<circle cx="${(i * 73) % 840}" cy="${(i * 137) % 980}" r="${(i % 5 + 1) / 2.7}" opacity="${.35 + (i % 7) / 12}"/>`).join('')}
+        </g>
+        <path d="M0 950 C120 900 168 992 270 930 C365 872 470 940 570 890 C685 830 740 880 840 790 L840 1494 L0 1494 Z" fill="#05080d" opacity=".94"/>
+        <path d="M0 1160 C140 1110 198 1172 322 1140 C475 1095 580 1198 840 1118 L840 1494 L0 1494 Z" fill="#030407" opacity=".82"/>
+        <path d="M95 625 C180 460 258 390 380 250" stroke="#b59bd2" stroke-width="42" stroke-linecap="round" opacity=".16" filter="url(#blur)"/>
+        <path d="M92 628 C185 492 276 418 404 282" stroke="#f5d1d5" stroke-width="12" stroke-linecap="round" opacity=".13" filter="url(#blur)"/>
+      </svg>`);
+
+    const defaultAvatar = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
+        <rect width="120" height="120" rx="60" fill="#fff"/>
+        <circle cx="60" cy="65" r="31" fill="#fbfbfb" stroke="#222" stroke-width="2"/>
+        <path d="M45 39 C38 20 48 21 57 38 M68 38 C78 19 87 23 76 43" fill="none" stroke="#222" stroke-width="2" stroke-linecap="round"/>
+        <circle cx="50" cy="63" r="2" fill="#222"/><circle cx="70" cy="63" r="2" fill="#222"/>
+        <path d="M55 73 Q60 77 65 73" fill="none" stroke="#222" stroke-width="2" stroke-linecap="round"/>
+      </svg>`);
+
+    const root = document.documentElement;
+    const fields = {
+      sportType: document.getElementById('sportType'),
+      userName: document.getElementById('userName'),
+      sportDate: document.getElementById('sportDate'),
+      distance: document.getElementById('distance'),
+      distanceUnit: document.getElementById('distanceUnit'),
+      duration: document.getElementById('duration'),
+      calorie: document.getElementById('calorie'),
+      calorieLabel: document.getElementById('calorieLabel'),
+      calorieUnit: document.getElementById('calorieUnit')
+    };
+    const preview = {
+      type: document.getElementById('typePreview'),
+      name: document.getElementById('namePreview'),
+      date: document.getElementById('datePreview'),
+      distance: document.getElementById('distancePreview'),
+      distanceUnit: document.querySelector('.distance .km'),
+      duration: document.getElementById('durationPreview'),
+      calorie: document.getElementById('caloriePreview'),
+      calorieLabel: document.getElementById('calorieLabelPreview'),
+      calorieUnit: document.querySelector('.value .unit'),
+      avatar: document.getElementById('avatarPreview')
+    };
+    const canvas = document.getElementById('heartChart');
+    const ctx = canvas.getContext('2d');
+    const bgUpload = document.getElementById('bgUpload');
+    const avatarUpload = document.getElementById('avatarUpload');
+    const phoneBg = document.querySelector('.phone-bg');
+    let currentBgSrc = './img/bg.jpg';
+
+    phoneBg.style.backgroundImage = `url("${currentBgSrc}")`;
+    preview.avatar.src = defaultAvatar;
+
+    function formatDate(value) {
+      if (!value) return '';
+      const date = new Date(value + 'T00:00:00');
+      if (Number.isNaN(date.getTime())) return value;
+      return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
+    }
+
+    function updatePreview() {
+      preview.type.textContent = fields.sportType.value;
+      preview.name.textContent = fields.userName.value || '用户';
+      preview.date.textContent = formatDate(fields.sportDate.value);
+      preview.distance.textContent = Number(fields.distance.value || 0).toFixed(2);
+      preview.distanceUnit.textContent = fields.distanceUnit.value || 'km';
+      preview.duration.textContent = fields.duration.value || '00:00:00';
+      preview.calorie.textContent = Math.max(0, Math.round(Number(fields.calorie.value || 0)));
+      preview.calorieLabel.textContent = fields.calorieLabel.value || '活动卡路里';
+      preview.calorieUnit.textContent = fields.calorieUnit.value || 'kcal';
+    }
+
+    function readImage(file, callback) {
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => callback(reader.result);
+      reader.readAsDataURL(file);
+    }
+
+    function generateHeartData() {
+      const points = [];
+      let base = 58 + Math.random() * 18;
+      for (let i = 0; i < 48; i += 1) {
+        base += (Math.random() - .48) * 11;
+        const wave = Math.sin(i / 4) * 10 + Math.sin(i / 9) * 6;
+        points.push(Math.max(26, Math.min(96, base + wave + Math.random() * 10)));
+      }
+      return points;
+    }
+
+    let heartData = generateHeartData();
+
+    function drawHeartChart() {
+      const w = canvas.width;
+      const h = canvas.height;
+      ctx.clearRect(0, 0, w, h);
+      const gradient = ctx.createLinearGradient(0, 20, 0, h);
+      gradient.addColorStop(0, 'rgba(255,255,255,.28)');
+      gradient.addColorStop(1, 'rgba(255,255,255,0)');
+      const step = w / (heartData.length - 1);
+      const y = value => h - 14 - (value / 110) * (h - 20);
+
+      ctx.beginPath();
+      ctx.moveTo(0, h);
+      heartData.forEach((value, i) => ctx.lineTo(i * step, y(value)));
+      ctx.lineTo(w, h);
+      ctx.closePath();
+      ctx.fillStyle = gradient;
+      ctx.fill();
+
+      ctx.beginPath();
+      heartData.forEach((value, i) => {
+        const x = i * step;
+        const yy = y(value);
+        if (i === 0) ctx.moveTo(x, yy);
+        else ctx.lineTo(x, yy);
+      });
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 4;
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+      ctx.shadowColor = 'rgba(255,255,255,.35)';
+      ctx.shadowBlur = 8;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
+
+    Object.values(fields).forEach(field => field.addEventListener('input', updatePreview));
+    bgUpload.addEventListener('change', event => readImage(event.target.files[0], src => {
+      currentBgSrc = src;
+      phoneBg.style.backgroundImage = `url("${currentBgSrc}")`;
+    }));
+    avatarUpload.addEventListener('change', event => readImage(event.target.files[0], src => { preview.avatar.src = src; }));
+    document.getElementById('randomChart').addEventListener('click', () => { heartData = generateHeartData(); drawHeartChart(); });
+
+    function loadImage(src) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error('图片加载失败'));
+        img.src = src;
+      });
+    }
+
+    function roundedRect(context, x, y, w, h, r) {
+      context.beginPath();
+      context.moveTo(x + r, y);
+      context.arcTo(x + w, y, x + w, y + h, r);
+      context.arcTo(x + w, y + h, x, y + h, r);
+      context.arcTo(x, y + h, x, y, r);
+      context.arcTo(x, y, x + w, y, r);
+      context.closePath();
+    }
+
+    function drawCover(context, img, x, y, w, h) {
+      const scale = Math.max(w / img.width, h / img.height);
+      const sw = w / scale;
+      const sh = h / scale;
+      const sx = (img.width - sw) / 2;
+      const sy = (img.height - sh) / 2;
+      context.drawImage(img, sx, sy, sw, sh, x, y, w, h);
+    }
+
+    function drawQr(context) {
+      context.fillStyle = '#fff';
+      context.fillRect(359, 18, 42, 42);
+      context.fillStyle = '#111';
+      for (let y = 21; y < 57; y += 7) {
+        for (let x = 362; x < 398; x += 7) {
+          if ((x * 3 + y * 5) % 4 !== 0) context.fillRect(x, y, 4, 4);
         }
-        
-        document.getElementById('distance').addEventListener('input', function(e) {
-            document.getElementById('previewDistance').textContent = e.target.value || '1.01';
+      }
+      context.fillStyle = '#f05a28';
+      context.beginPath();
+      context.arc(380, 39, 4, 0, Math.PI * 2);
+      context.fill();
+    }
+
+    async function renderDownload() {
+      try {
+        const capture = document.getElementById('capture');
+        const canvasShot = await html2canvas(capture, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: null,
+          logging: false
         });
-        
-        document.getElementById('duration').addEventListener('input', function(e) {
-            document.getElementById('previewDuration').textContent = e.target.value || '00:08:49';
-        });
-        
-        document.getElementById('calories').addEventListener('input', function(e) {
-            document.getElementById('previewCalories').textContent = e.target.value || '59';
-        });
-        
-        function drawHeartRate() {
-            const canvas = document.getElementById('heartRateCanvas');
-            const ctx = canvas.getContext('2d');
-            
-            canvas.width = 135;
-            canvas.height = 42;
-            
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            const baseY = canvas.height * 0.75;
-            const amplitude = canvas.height * 0.5;
-            
-            ctx.beginPath();
-            ctx.moveTo(0, baseY);
-            
-            const points = 40;
-            let prevY = baseY;
-            
-            for (let i = 0; i <= points; i++) {
-                const x = (i / points) * canvas.width;
-                const noise = Math.random() * 0.35 - 0.175;
-                const wave1 = Math.sin(i * 0.25) * 0.25;
-                const wave2 = Math.sin(i * 0.12) * 0.18;
-                const wave3 = Math.sin(i * 0.38) * 0.12;
-                const y = baseY - (wave1 + wave2 + wave3 + noise) * amplitude;
-                
-                const smoothY = (prevY + y) / 2;
-                ctx.lineTo(x, smoothY);
-                prevY = y;
-            }
-            
-            ctx.lineTo(canvas.width, baseY);
-            ctx.closePath();
-            
-            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-            gradient.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
-            gradient.addColorStop(0.3, 'rgba(255, 200, 180, 0.8)');
-            gradient.addColorStop(1, 'rgba(255, 100, 80, 0.2)');
-            
-            ctx.fillStyle = gradient;
-            ctx.fill();
-            
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.98)';
-            ctx.lineWidth = 1.8;
-            ctx.stroke();
-        }
-        
-        function generateHeartRate() {
-            drawHeartRate();
-        }
-        
-        function downloadImage() {
-            const element = document.getElementById('screenshot');
-            
-            html2canvas(element, {
-                scale: 2,
-                backgroundColor: null,
-                useCORS: true,
-                logging: false
-            }).then(function(canvas) {
-                const link = document.createElement('a');
-                link.download = `小米运动截图_${new Date().getTime()}.png`;
-                link.href = canvas.toDataURL('image/png');
-                link.click();
-            });
-        }
-        
-        drawHeartRate();
-    </script>
+        const link = document.createElement('a');
+        link.download = `小米运动截图-${Date.now()}.png`;
+        link.href = canvasShot.toDataURL('image/png');
+        link.click();
+      } catch (error) {
+        console.error(error);
+        alert('下载失败，请刷新页面后重试；如果上传了图片，请换一张本地图片再试。');
+      }
+    }
+
+    document.getElementById('download').addEventListener('click', renderDownload);
+    updatePreview();
+    drawHeartChart();
+  </script>
 </body>
 </html>
