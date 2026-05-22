@@ -301,7 +301,7 @@
                             <option value="mysql">MySQL</option>
                             <option value="postgresql">PostgreSQL</option>
                             <option value="oracle">Oracle</option>
-                            <option value="sqlserver">SQL Server</option>
+                            <option value="sqlserver" selected>SQL Server</option>
                         </select>
                     </div>
                 </div>
@@ -468,11 +468,10 @@
             const paramNames = paramDecls.map(p => p.name);
             const numericTypes = new Set(['INT', 'BIGINT', 'SMALLINT', 'TINYINT', 'BIT', 'FLOAT', 'REAL', 'DECIMAL', 'NUMERIC', 'MONEY', 'SMALLMONEY']);
 
-            const indexedParams = paramNames.map((name, index) => ({ name, index }));
-            indexedParams.sort((a, b) => b.name.length - a.name.length);
-
             let resultSql = unescapeSqlLiterals(template);
-            indexedParams.forEach(({ name, index }) => {
+
+            const replacementMap = {};
+            paramNames.forEach((name, index) => {
                 const value = index < paramValues.length ? paramValues[index] : '';
                 const decl = paramDecls[index];
                 const isNumeric = decl && numericTypes.has(decl.type);
@@ -485,9 +484,11 @@
                 } else {
                     replacement = `'${escapeSingleQuote(value)}'`;
                 }
-                const regex = new RegExp(escapeRegex(name), 'g');
-                resultSql = resultSql.replace(regex, replacement);
+                replacementMap[name] = replacement;
             });
+
+            const sortedNames = [...paramNames].sort((a, b) => b.length - a.length);
+            resultSql = smartReplaceParams(resultSql, sortedNames, replacementMap);
 
             return { sql: resultSql, params: paramNames, values: paramValues };
         }
@@ -752,6 +753,36 @@
 
         function escapeRegex(str) {
             return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+
+        function smartReplaceParams(sql, sortedNames, replacementMap) {
+            let result = '';
+            let i = 0;
+            while (i < sql.length) {
+                let matched = false;
+                for (const name of sortedNames) {
+                    if (sql.slice(i, i + name.length) === name) {
+                        const afterIdx = i + name.length;
+                        let j = afterIdx;
+                        while (j < sql.length && sql[j] === ' ') {
+                            j++;
+                        }
+                        if (j < sql.length && sql[j] === '=') {
+                            result += name;
+                        } else {
+                            result += replacementMap[name];
+                        }
+                        i = afterIdx;
+                        matched = true;
+                        break;
+                    }
+                }
+                if (!matched) {
+                    result += sql[i];
+                    i++;
+                }
+            }
+            return result;
         }
 
         function formatSql(sql, dbType) {

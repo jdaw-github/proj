@@ -321,12 +321,12 @@ background-size: 100% 100%; */
         </div>
         <div class="field">
           <label for="sportDate">运动日期</label>
-          <input id="sportDate" type="date" value="2024-10-10" />
+          <input id="sportDate" type="date" value="" />
         </div>
         <div class="field">
           <label for="distance">运动距离</label>
           <div style="display:grid;grid-template-columns:1fr 110px;gap:10px;">
-            <input id="distance" type="number" min="0" step="0.01" value="2.11" />
+            <input id="distance" type="number" min="0" step="0.01" value="5.12" />
             <input id="distanceUnit" type="text" value="km" placeholder="单位" />
           </div>
         </div>
@@ -344,13 +344,13 @@ background-size: 100% 100%; */
         <div class="field">
           <label for="calorie">活动指标</label>
           <div style="display:grid;grid-template-columns:1fr 140px;gap:10px;">
-            <input id="calorie" type="number" min="0" step="1" value="132" />
+            <input id="calorie" type="number" min="0" step="1" value="323" />
             <input id="calorieLabel" type="text" value="活动卡路里" placeholder="名称" />
           </div>
         </div>
         <div class="field">
           <label for="calorieUnit">指标单位</label>
-          <input id="calorieUnit" type="text" value="bpm" placeholder="单位" />
+          <input id="calorieUnit" type="text" value="kcal" placeholder="单位" />
         </div>
         <div class="field full">
           <label for="bgUpload">背景图片（不上传则使用默认星空图）</label>
@@ -365,7 +365,8 @@ background-size: 100% 100%; */
         <button id="randomChart" type="button" class="secondary">随机心率图</button>
         <button id="download" type="button">下载图片</button>
       </div>
-      <div class="hint">建议上传竖版背景图，导出尺寸为 420 × 747，可直接用于手机分享。</div>
+      <div class="hint">建议上传竖版背景图，导出尺寸为 420 × 747，可直接用于手机分享。<br/>固定基准条件<br/><br/>跑步<br/>运动距离(5.5km) x 7.2 = 运动时间<br/>运动距离(5.5km) x 59.16 = 运动热量
+	  </div>
     </aside>
   </main>
 
