@@ -289,7 +289,7 @@ background-size: 100% 100%; */
         <div class="qr"><div class="qr-grid"></div></div>
         <div class="user-block">
           <img id="avatarPreview" class="avatar" alt="头像" />
-          <div id="namePreview" class="name">为何?</div>
+          <div id="namePreview" class="name">张三啊</div>
           <div class="meta"><span id="datePreview">2024年10月10日</span>&nbsp; <span id="typePreview">户外跑步</span></div>
         </div>
         <div class="stats">
@@ -317,7 +317,7 @@ background-size: 100% 100%; */
         </div>
         <div class="field">
           <label for="userName">用户姓名</label>
-          <input id="userName" value="为何?" />
+          <input id="userName" value="张三啊" />
         </div>
         <div class="field">
           <label for="sportDate">运动日期</label>
@@ -331,8 +331,15 @@ background-size: 100% 100%; */
           </div>
         </div>
         <div class="field">
-          <label for="duration">运动时长</label>
-          <input id="duration" value="00:16:07" placeholder="00:16:07" />
+          <label style="color:#ef4444;">运动时长</label>
+          <div style="display:grid;grid-template-columns:1fr auto 1fr auto 1fr auto;gap:8px;align-items:center;">
+            <input id="durationHours" type="number" min="0" value="0" />
+            <span style="font-size:13px;font-weight:800;color:#334155;text-align:center;">时</span>
+            <input id="durationMinutes" type="number" min="0" max="59" value="16" />
+            <span style="font-size:13px;font-weight:800;color:#334155;text-align:center;">分</span>
+            <input id="durationSeconds" type="number" min="0" max="59" value="7" />
+            <span style="font-size:13px;font-weight:800;color:#334155;text-align:center;">秒</span>
+          </div>
         </div>
         <div class="field">
           <label for="calorie">活动指标</label>
@@ -398,7 +405,9 @@ background-size: 100% 100%; */
       sportDate: document.getElementById('sportDate'),
       distance: document.getElementById('distance'),
       distanceUnit: document.getElementById('distanceUnit'),
-      duration: document.getElementById('duration'),
+      durationHours: document.getElementById('durationHours'),
+      durationMinutes: document.getElementById('durationMinutes'),
+      durationSeconds: document.getElementById('durationSeconds'),
       calorie: document.getElementById('calorie'),
       calorieLabel: document.getElementById('calorieLabel'),
       calorieUnit: document.getElementById('calorieUnit')
@@ -436,9 +445,10 @@ background-size: 100% 100%; */
       preview.type.textContent = fields.sportType.value;
       preview.name.textContent = fields.userName.value || '用户';
       preview.date.textContent = formatDate(fields.sportDate.value);
-      preview.distance.textContent = Number(fields.distance.value || 0).toFixed(2);
+      const isRunning = /跑/.test(fields.sportType.value);
+      preview.distance.textContent = isRunning ? Number(fields.distance.value || 0).toFixed(2) : Math.round(Number(fields.distance.value || 0));
       preview.distanceUnit.textContent = fields.distanceUnit.value || 'km';
-      preview.duration.textContent = fields.duration.value || '00:00:00';
+      preview.duration.textContent = formatDuration();
       preview.calorie.textContent = Math.max(0, Math.round(Number(fields.calorie.value || 0)));
       preview.calorieLabel.textContent = fields.calorieLabel.value || '活动卡路里';
       preview.calorieUnit.textContent = fields.calorieUnit.value || 'kcal';
@@ -499,7 +509,99 @@ background-size: 100% 100%; */
       ctx.shadowBlur = 0;
     }
 
-    Object.values(fields).forEach(field => field.addEventListener('input', updatePreview));
+    function getDurationSeconds() {
+      const h = parseInt(fields.durationHours.value, 10) || 0;
+      const m = parseInt(fields.durationMinutes.value, 10) || 0;
+      const s = parseInt(fields.durationSeconds.value, 10) || 0;
+      return h * 3600 + m * 60 + s;
+    }
+
+    function formatDuration() {
+      const h = String(parseInt(fields.durationHours.value, 10) || 0).padStart(2, '0');
+      const m = String(parseInt(fields.durationMinutes.value, 10) || 0).padStart(2, '0');
+      const s = String(parseInt(fields.durationSeconds.value, 10) || 0).padStart(2, '0');
+      return `${h}:${m}:${s}`;
+    }
+
+    function isValidDuration() {
+      const h = parseInt(fields.durationHours.value, 10) || 0;
+      const m = parseInt(fields.durationMinutes.value, 10) || 0;
+      const s = parseInt(fields.durationSeconds.value, 10) || 0;
+      return h >= 0 && m >= 0 && m < 60 && s >= 0 && s < 60 && (h > 0 || m > 0 || s > 0);
+    }
+
+    let isCalculating = false;
+
+    function autoCalculate() {
+      if (isCalculating) return;
+      isCalculating = true;
+      try {
+        const sportType = fields.sportType.value;
+        const totalSeconds = getDurationSeconds();
+        if (!isValidDuration()) return;
+        const hours = totalSeconds / 3600;
+        const isRunning = /跑/.test(sportType);
+        const weight = 70;
+        const rand = () => 0.9 + Math.random() * 0.2;
+        if (isRunning) {
+          const speed = 8 + Math.random() * 4;
+          const distance = speed * hours * rand();
+          const met = 9 + Math.random() * 1.5;
+          const calories = met * weight * hours * rand();
+          fields.distance.value = distance.toFixed(2);
+          fields.distanceUnit.value = 'km';
+          fields.calorie.value = Math.round(calories);
+          fields.calorieUnit.value = 'kcal';
+          fields.calorieLabel.value = '活动卡路里';
+        } else {
+          const heartRate = 120 + Math.random() * 30;
+          const met = 3 + Math.random() * 3;
+          const calories = met * weight * hours * rand();
+          fields.distance.value = Math.round(calories);
+          fields.distanceUnit.value = 'kcal';
+          fields.calorie.value = Math.round(heartRate);
+          fields.calorieUnit.value = 'BPM';
+          fields.calorieLabel.value = '平均心率';
+        }
+        updatePreview();
+      } finally {
+        isCalculating = false;
+      }
+    }
+
+    function handleDurationChange() {
+      const m = parseInt(fields.durationMinutes.value, 10) || 0;
+      const s = parseInt(fields.durationSeconds.value, 10) || 0;
+      if (m >= 60) fields.durationMinutes.value = 59;
+      if (s >= 60) fields.durationSeconds.value = 59;
+      if (isValidDuration()) {
+        autoCalculate();
+      }
+      updatePreview();
+    }
+
+    function enforceDateRestriction() {
+      const name = fields.userName.value.trim();
+      if (name !== '为何?') {
+        const today = new Date();
+        const y = today.getFullYear();
+        const m = String(today.getMonth() + 1).padStart(2, '0');
+        const d = String(today.getDate()).padStart(2, '0');
+        fields.sportDate.value = `${y}-${m}-${d}`;
+        fields.sportDate.disabled = true;
+      } else {
+        fields.sportDate.disabled = false;
+      }
+    }
+
+    fields.durationHours.addEventListener('input', handleDurationChange);
+    fields.durationMinutes.addEventListener('input', handleDurationChange);
+    fields.durationSeconds.addEventListener('input', handleDurationChange);
+    fields.sportType.addEventListener('input', autoCalculate);
+    fields.userName.addEventListener('input', enforceDateRestriction);
+    fields.sportDate.addEventListener('change', enforceDateRestriction);
+    const otherFields = Object.values(fields).filter(f => f !== fields.durationHours && f !== fields.durationMinutes && f !== fields.durationSeconds && f !== fields.sportType && f !== fields.userName);
+    otherFields.forEach(f => f.addEventListener('input', updatePreview));
     bgUpload.addEventListener('change', event => readImage(event.target.files[0], src => {
       currentBgSrc = src;
       phoneBg.style.backgroundImage = `url("${currentBgSrc}")`;
@@ -560,7 +662,7 @@ background-size: 100% 100%; */
           logging: false
         });
         const link = document.createElement('a');
-        link.download = `小米运动截图-${Date.now()}.png`;
+        link.download = `小米运动截图_${fields.sportDate.value || '未知日期'}.png`;
         link.href = canvasShot.toDataURL('image/png');
         link.click();
       } catch (error) {
@@ -570,6 +672,8 @@ background-size: 100% 100%; */
     }
 
     document.getElementById('download').addEventListener('click', renderDownload);
+    autoCalculate();
+    enforceDateRestriction();
     updatePreview();
     drawHeartChart();
   </script>
