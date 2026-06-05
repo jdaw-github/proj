@@ -50,6 +50,7 @@
 | 个人博客主页 | index.html | 工具导航、个人介绍 | 低 |
 | 安全密码生成器 | tool/HTML_密码生成器/HTML_密码生成器.html | 密码生成、二维码 | 中 |
 | 工作日期计算器 | tool/HTML_工作日计算器/HTML_工作日计算器.html | 日期计算、日历展示 | 高 |
+| 动态SQL转静态SQL | tool/HTML_动态SQL转静态SQL/index.html | sp_executesql 转静态 SQL | 高 |
 
 ---
 
@@ -77,8 +78,10 @@ MyAiProj/
 ├── tool/                               # 工具页面目录
 │   ├── HTML_密码生成器/
 │   │   └── HTML_密码生成器.html         # 密码生成器工具
-│   └── HTML_工作日计算器/
-│       └── HTML_工作日计算器.html       # 工作日期计算器
+│   ├── HTML_工作日计算器/
+│   │   └── HTML_工作日计算器.html       # 工作日期计算器
+│   └── HTML_动态SQL转静态SQL/
+│       └── index.html                  # 动态SQL转静态SQL工具
 └── .trae/
     └── documents/                       # 项目文档目录
         ├── PROJECT_OVERVIEW.md          # 项目总览文档
@@ -177,7 +180,6 @@ MyAiProj/
     transition: all 0.3s ease;
 }
 .gradient-btn:hover {
-    transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
 }
 
@@ -370,14 +372,21 @@ lengthEl.addEventListener('input', () => {
     generatePassword();
 });
 
-// 数字输入框变化时同步更新滑动条
+// 数字输入框变化时实时同步滑动条（不打断用户输入）
 lengthNumberEl.addEventListener('input', () => {
     let value = parseInt(lengthNumberEl.value);
-    if (isNaN(value)) value = 8;
-    value = Math.max(4, Math.min(64, value));  // 限制范围
-    lengthNumberEl.value = value;
+    if (isNaN(value) || value < 4) value = 4;
+    if (value > 64) value = 64;
     lengthEl.value = value;
     generatePassword();
+});
+
+// 数字输入框失去焦点时做最终校验
+lengthNumberEl.addEventListener('blur', () => {
+    let value = parseInt(lengthNumberEl.value);
+    if (isNaN(value)) value = 8;
+    value = Math.max(4, Math.min(64, value));
+    lengthNumberEl.value = value;
 });
 ```
 
@@ -986,9 +995,154 @@ function getWeekdayName(date) {
 
 ---
 
-## 第五部分：通用技术规范
+## 第五部分：动态SQL转静态SQL工具技术方案
 
-### 5.1 样式变量系统
+### 5.1 技术选型
+
+动态SQL转静态SQL工具采用纯前端单页应用架构，所有逻辑集中在一个 HTML 文件中。
+
+| 技术项 | 选择 | 说明 |
+|--------|------|------|
+| 基础框架 | HTML5 + CSS3 + JavaScript | 原生技术栈，无依赖框架 |
+| 样式方案 | 内联 CSS + 渐变配色 | 深色代码编辑器风格，紫色渐变品牌色 |
+| 语法高亮 | sql-formatter@15.3.1 (CDN) | SQL 格式化与语法高亮，支持 TSQL/MySQL/PostgreSQL/Oracle |
+| 处理引擎 | 词法分析状态机 | 逐字符扫描解析 sp_executesql 参数列表 |
+
+### 5.2 核心架构
+
+#### 5.2.1 双模式引擎设计
+
+工具根据输入内容自动切换到对应模式：
+
+```
+输入 SQL
+  ├─ 以 exec sp_executesql 开头 → 自动模式（parseSpExecutesql）
+  │    ├─ 解析 N'...' SQL 模板（词法扫描去除外层 N' 包裹）
+  │    ├─ 解析参数声明列表（@name type,…）
+  │    ├─ 解析参数值列表（N'...' / '...' / NULL / 数值 / @name=value）
+  │    ├─ 生成 DECLARE 变量声明块拼接到模板头部
+  │    └─ sql-formatter 格式化输出
+  └─ 包含 @name / :name / ? 占位符 → 手动模式
+       ├─ 正则提取占位符列表
+       ├─ 渲染参数配置表格（类型/值输入）
+       └─ 用户填写后实时替换并格式化
+```
+
+#### 5.2.2 核心函数调用链
+
+```
+convertSql()
+  ├─ [自动模式] convertSpExecutesql()
+  │    ├─ splitByGo()              ── 按 GO 分割多批语句
+  │    └─ parseSpExecutesql()      ── 单条解析
+  │         ├─ parseNStringArgs()  ── 外层参数分割（跳过空格/逗号）
+  │         │    └─ parseValueToken()   ── 多态参数值解析
+  │         │         ├─ parseNOrPlainString() → parseQuotedString()
+  │         │         │    └─ parseQuotedString()  ── 处理 ''→' 转义
+  │         │         ├─ NULL 匹配
+  │         │         └─ 普通单词匹配
+  │         ├─ 参数声明解析（@\S+ 正则）
+  │         ├─ formatParamDefaultValue()  ── 类型感知格式化默认值
+  │         └─ unescapeSqlLiterals()  ── 词法扫描状态机去引号包裹
+  │              └─ 逐字符状态机处理 N'...' / '...' / --注释 / ''转义
+  └─ [手动模式] extractGenericParams() + renderParams() + applyConversionWithParams()
+       ├─ extractGenericParams()      ── 清除字符串后正则提取占位符
+       ├─ renderParams()              ── 渲染参数配置表格
+       └─ applyConversionWithParams() ── 类型感知替换 + sql-formatter 格式化
+```
+
+### 5.3 关键实现细节
+
+#### 5.3.1 词法扫描状态机（unescapeSqlLiterals）
+
+核心挑战：sp_executesql 的 SQL 模板是一个 N'...' 包裹的字符串，内部包含大量 SQL 代码。外层 N' 需要去掉，但内部的 N' 字符串字面量、'' 转义、-- 注释等必须精确保留。
+
+```
+输入: N'SELECT * FROM t WHERE c = N''hello'' -- name'
+输出: SELECT * FROM t WHERE c = N'hello' -- name
+```
+
+算法采用逐字符状态机：
+- 遇到 `N'`（外层）：输出 `N'`，进入字符串扫描，遇到单独 `'` 结束
+- 遇到 `'`：输出 `'`，进入字符串扫描保留所有内容，遇到单独 `'` 结束
+- 遇到 `--`：直接输出到行尾，不解析引号
+- 扫描 N'...' 时检测 `''` → `''` 保留（SQL 转义引号）
+- 扫描 N'...' 时检测 `'' + @param` → 提前结束（字符串拼接）
+
+#### 5.3.2 参数值解析（parseValueToken）
+
+sp_executesql 的参数值部分语法灵活，需要处理多种格式：
+- `@name=value` 命名参数：匹配 `@[^\s,]+= ` 后递归解析值
+- `N'...'` Unicode 字符串：解析到匹配的闭合单引号，处理内部 `''` 转义
+- `'...'` 普通字符串：同上
+- `NULL` 字面量
+- 数值/标识符等普通单词
+
+#### 5.3.3 参数声明解析（parseSpExecutesql）
+
+提取参数声明字符串 `N'@P0 int, @P1 varchar(4000)'`：
+
+```
+正则: /^(@\S+)\s+(\w+(?:\([^)]*\))?)/
+捕获1: @p_s开始时间   (参数名，支持中文)
+捕获2: VARCHAR(4000)  (参数类型，含长度)
+```
+
+遍历所有声明后生成 DECLARE 块拼接到 SQL 头部，保留参数引用不变。
+
+### 5.4 数据流
+
+```
+输入文本（sp_executesql 动态 SQL 或含占位符 SQL）
+  │
+  ▼
+去除首尾空白，判断模式
+  │
+  ├─ 自动模式：
+  │   按 GO 分割 → 逐段解析 →
+  │   parseNStringArgs 分拆外层参数 →
+  │   提取 SQL 模板 + 参数声明 + 参数值 →
+  │   生成 DECLARE 变量声明块 →
+  │   unescapeSqlLiterals 去掉外层引号 →
+  │   拼接 DECLARE + 模板 →
+  │   sql-formatter 格式化 →
+  │   GO 连接多段结果输出
+  │
+  └─ 手动模式：
+       提取占位符 → 渲染表格 →
+       用户填写参数值 →
+       类型感知替换占位符 →
+       sql-formatter 格式化输出
+```
+
+### 5.5 样式设计
+
+页面采用深色代码编辑器风格，与 SQL 代码编辑场景匹配。
+
+| 设计要素 | 值 | 说明 |
+|----------|-----|------|
+| 编辑器背景 | #0f172a（slate-900） | 深色背景，专注代码 |
+| 文本颜色 | #e2e8f0（slate-200） | 高对比度，易于阅读 |
+| 字体 | Fira Code / Consolas / Monaco | 等宽字体，适合代码 |
+| 圆角 | 12px（编辑器）、8px（按钮） | 统一圆角体系 |
+| 渐变主色 | #667eea → #2563eb | 紫色到蓝色渐变 |
+| 输出区域 | 与输入同风格（只读） | 输入输出视觉一致 |
+
+### 5.6 边界情况处理
+
+| 场景 | 处理策略 |
+|------|----------|
+| 中文参数名（@p_s开始时间） | 使用 `\S+` 而非 `\w+` 匹配参数名 |
+| SQL 模板中空字符串 `''` | 词法扫描状态机保留 `''` 不做反转义 |
+| `N'...' + @param` 字符串拼接 | 词法扫描检测 `''` 后紧跟 `+ @` 时提前截断 |
+| 参数默认值为 NULL | 类型感知：数值类型不加引号，字符串加引号 |
+| 多批 GO 分割 | 按 `\n\s*go\s*(\n\|$)` 正则分割，逐段处理 |
+
+---
+
+## 第六部分：通用技术规范
+
+### 6.1 样式变量系统
 
 所有页面共享统一的样式变量系统，确保视觉风格的一致性。
 
@@ -1028,7 +1182,7 @@ function getWeekdayName(date) {
 }
 ```
 
-### 5.2 动画效果规范
+### 6.2 动画效果规范
 
 页面中的动画效果遵循统一的时长和缓动函数规范。
 
@@ -1039,30 +1193,30 @@ function getWeekdayName(date) {
 | 滑入动画 | 0.4s | ease-out | 结果显示 |
 | 淡入动画 | 0.3s | ease-out | 模态框弹出 |
 
-### 5.3 性能优化策略
+### 6.3 性能优化策略
 
-#### 5.3.1 CSS优化
+#### 6.3.1 CSS优化
 
 - 使用Tailwind CSS CDN，利用浏览器缓存减少重复加载
 - 内联关键CSS，减少渲染阻塞
 - 避免过深的CSS选择器嵌套
 - 使用CSS变量实现主题复用
 
-#### 5.3.2 JavaScript优化
+#### 6.3.2 JavaScript优化
 
 - 事件委托：使用单个事件监听器处理同类元素
 - 防抖节流：对高频事件（如滚动、输入）应用防抖
 - DOM缓存：避免重复查询同一DOM元素
 - 按需加载：二维码库仅在密码生成器页面加载
 
-#### 5.3.3 资源优化
+#### 6.3.3 资源优化
 
 - 图片资源使用适当格式和压缩
 - 字体使用font-display: swap确保文字可读
 - 外部CDN使用稳定可靠的公共服务
 - 避免不必要的第三方依赖
 
-### 5.4 浏览器兼容性
+### 6.4 浏览器兼容性
 
 | 浏览器 | 最低版本 | 支持特性 |
 |--------|----------|----------|
@@ -1072,7 +1226,7 @@ function getWeekdayName(date) {
 | Edge | 80+ | 全部特性 |
 | IE | 不支持 | - |
 
-### 5.5 无障碍支持
+### 6.5 无障碍支持
 
 | 检查项 | 实现方式 | 说明 |
 |--------|----------|------|
@@ -1084,9 +1238,9 @@ function getWeekdayName(date) {
 
 ---
 
-## 第六部分：部署说明
+## 第七部分：部署说明
 
-### 6.1 部署方式
+### 7.1 部署方式
 
 项目支持多种静态文件部署方式，根据实际需求选择合适的方案。
 
@@ -1098,7 +1252,7 @@ function getWeekdayName(date) {
 | Nginx | 自有服务器 | 中 | 服务器费用 |
 | Apache | 自有服务器 | 中 | 服务器费用 |
 
-### 6.2 部署检查清单
+### 7.2 部署检查清单
 
 在部署前进行以下检查，确保网站正常运行。
 
@@ -1110,7 +1264,7 @@ function getWeekdayName(date) {
 - [ ] 表单交互功能正常工作
 - [ ] 浏览器控制台无错误信息
 
-### 6.3 目录结构要求
+### 7.3 目录结构要求
 
 部署时需要保持以下目录结构不变，确保相对路径引用正常工作。
 
@@ -1128,7 +1282,7 @@ MyAiProj/                          # 项目根目录
     └── documents/
 ```
 
-### 6.4 域名配置建议
+### 7.4 域名配置建议
 
 如果使用自定义域名，建议进行以下配置。
 
@@ -1139,9 +1293,9 @@ MyAiProj/                          # 项目根目录
 
 ---
 
-## 第七部分：API接口文档
+## 第八部分：API接口文档
 
-### 7.1 假期数据API
+### 8.1 假期数据API
 
 **接口地址**：`https://timor.tech/api/holiday/year/{year}`
 
@@ -1184,9 +1338,9 @@ MyAiProj/                          # 项目根目录
 
 ---
 
-## 第八部分：数据模型
+## 第九部分：数据模型
 
-### 8.1 配置数据结构
+### 9.1 配置数据结构
 
 ```typescript
 interface CalculatorConfig {
@@ -1199,7 +1353,7 @@ interface CalculatorConfig {
 }
 ```
 
-### 8.2 LocalStorage存储格式
+### 9.2 LocalStorage存储格式
 
 ```json
 {
@@ -1212,7 +1366,7 @@ interface CalculatorConfig {
 }
 ```
 
-### 8.3 假期信息数据结构
+### 9.3 假期信息数据结构
 
 ```typescript
 interface HolidayInfo {
@@ -1223,7 +1377,7 @@ interface HolidayInfo {
 }
 ```
 
-### 8.4 计算结果数据结构
+### 9.4 计算结果数据结构
 
 ```typescript
 interface CalculationResult {
@@ -1255,6 +1409,7 @@ interface CalendarDay {
 | index.html | 158 | 个人博客主页 |
 | tool/HTML_密码生成器/HTML_密码生成器.html | 356 | 密码生成器 |
 | tool/HTML_工作日计算器/HTML_工作日计算器.html | 1780 | 工作日期计算器 |
+| tool/HTML_动态SQL转静态SQL/index.html | 841 | 动态SQL转静态SQL |
 
 ### B. 依赖清单
 
@@ -1263,6 +1418,7 @@ interface CalendarDay {
 | Tailwind CSS | 3.x | cdn.tailwindcss.com | 全部 |
 | Noto Sans SC | - | fonts.googleapis.com | 全部 |
 | QRCode.js | 1.5.1 | cdn.jsdelivr.net/npm/qrcode | 密码生成器 |
+| sql-formatter | 15.3.1 | unpkg.com/sql-formatter@15.3.1 | 动态SQL转静态SQL |
 
 ### C. 浏览器支持矩阵
 

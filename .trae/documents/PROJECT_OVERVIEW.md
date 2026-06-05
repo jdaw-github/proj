@@ -19,6 +19,7 @@
 |----------|----------|----------|
 | 安全密码生成器 | tool/HTML_密码生成器/HTML_密码生成器.html | 生成高强度密码，支持自定义长度、字符类型、密码强度检测、二维码生成 |
 | 工作日期计算器 | tool/HTML_工作日计算器/HTML_工作日计算器.html | 精确计算项目交付日期，支持多种排班模式和法定假期配置 |
+| 动态SQL转静态SQL | tool/HTML_动态SQL转静态SQL/index.html | 将 sp_executesql 动态 SQL 一键转为可执行的静态 SQL，支持 SQL Server/MySQL/PostgreSQL/Oracle |
 
 ## 3. 技术架构
 
@@ -38,8 +39,10 @@ MyAiProj/
 ├── tool/                               # 工具页面目录
 │   ├── HTML_密码生成器/
 │   │   └── HTML_密码生成器.html         # 密码生成器工具
-│   └── HTML_工作日计算器/
-│       └── HTML_工作日计算器.html      # 工作日期计算器
+│   ├── HTML_工作日计算器/
+│   │   └── HTML_工作日计算器.html      # 工作日期计算器
+│   └── HTML_动态SQL转静态SQL/
+│       └── index.html                  # 动态SQL转静态SQL工具
 └── .trae/
     └── documents/                       # 项目文档
         ├── PROJECT_OVERVIEW.md          # 项目总览
@@ -127,8 +130,18 @@ MyAiProj/
 | Google Fonts | https://fonts.googleapis.com | Noto Sans SC字体 |
 | QRCode.js | https://cdn.jsdelivr.net/npm/qrcode | 二维码生成（密码生成器） |
 | 假期API | https://timor.tech/api/holiday | 工作日期计算器的假期数据 |
+| sql-formatter | https://unpkg.com/sql-formatter@15.3.1 | SQL 格式化（动态SQL转静态SQL工具） |
 
 ## 11. 更新日志
+
+### v1.2 (2026-06)
+- 安全密码生成器 UX 优化：
+  - 密码长度输入框改为 blur 时校验，输入过程不打断用户
+  - 复制按钮 hover 去掉上移动画，避免点击区域偏移
+  - "普通符号"复选框默认不勾选
+
+### v1.1 (2026-06)
+- 上线动态SQL转静态SQL工具
 
 ### v1.0 (2024)
 - 发布个人博客主页
