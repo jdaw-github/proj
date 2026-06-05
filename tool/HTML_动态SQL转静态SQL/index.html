@@ -460,7 +460,7 @@
 
             const paramDecls = paramDeclStr.split(',')
                 .map(s => {
-                    const m = s.trim().match(/^(@\w+)\s+(\w+)/);
+                    const m = s.trim().match(/^(@\S+)\s+(\w+(?:\([^)]*\))?)/);
                     return m ? { name: m[1], type: m[2].toUpperCase() } : null;
                 })
                 .filter(Boolean);
@@ -470,25 +470,14 @@
 
             let resultSql = unescapeSqlLiterals(template);
 
-            const replacementMap = {};
-            paramNames.forEach((name, index) => {
+            const declareLines = paramDecls.map((decl, index) => {
                 const value = index < paramValues.length ? paramValues[index] : '';
-                const decl = paramDecls[index];
-                const isNumeric = decl && numericTypes.has(decl.type);
-
-                let replacement;
-                if (value === 'NULL' || value === 'null') {
-                    replacement = 'NULL';
-                } else if (isNumeric) {
-                    replacement = value;
-                } else {
-                    replacement = `'${escapeSingleQuote(value)}'`;
-                }
-                replacementMap[name] = replacement;
+                return `\t${decl.name} ${decl.type}=${formatParamDefaultValue(value, decl.type)}`;
             });
 
-            const sortedNames = [...paramNames].sort((a, b) => b.length - a.length);
-            resultSql = smartReplaceParams(resultSql, sortedNames, replacementMap);
+            if (declareLines.length > 0) {
+                resultSql = 'DECLARE \n' + declareLines.join(',\n') + '\n\n' + resultSql;
+            }
 
             return { sql: resultSql, params: paramNames, values: paramValues };
         }
@@ -535,9 +524,6 @@
                             i++;
                         }
                     }
-                } else if (sql[i] === "'" && i + 1 < sql.length && sql[i + 1] === "'") {
-                    out += "'";
-                    i += 2;
                 } else if (sql[i] === "'") {
                     out += "'";
                     i++;
@@ -588,7 +574,7 @@
         }
 
         function parseValueToken(text, start) {
-            const namedMatch = text.slice(start).match(/^@\w+=\s*/);
+            const namedMatch = text.slice(start).match(/^@[^\s,]+=\s*/);
             if (namedMatch) {
                 const vStart = start + namedMatch[0].length;
                 const result = parseValueToken(text, vStart);
@@ -751,38 +737,12 @@
             return (str || '').replace(/'/g, "''");
         }
 
-        function escapeRegex(str) {
-            return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        }
-
-        function smartReplaceParams(sql, sortedNames, replacementMap) {
-            let result = '';
-            let i = 0;
-            while (i < sql.length) {
-                let matched = false;
-                for (const name of sortedNames) {
-                    if (sql.slice(i, i + name.length) === name) {
-                        const afterIdx = i + name.length;
-                        let j = afterIdx;
-                        while (j < sql.length && sql[j] === ' ') {
-                            j++;
-                        }
-                        if (j < sql.length && sql[j] === '=') {
-                            result += name;
-                        } else {
-                            result += replacementMap[name];
-                        }
-                        i = afterIdx;
-                        matched = true;
-                        break;
-                    }
-                }
-                if (!matched) {
-                    result += sql[i];
-                    i++;
-                }
-            }
-            return result;
+        function formatParamDefaultValue(value, type) {
+            if (value === 'NULL' || value === 'null') return 'NULL';
+            const baseType = type.replace(/\(.*\)/, '').toUpperCase();
+            const numericTypes = new Set(['INT', 'BIGINT', 'SMALLINT', 'TINYINT', 'BIT', 'FLOAT', 'REAL', 'DECIMAL', 'NUMERIC', 'MONEY', 'SMALLMONEY']);
+            if (numericTypes.has(baseType)) return value;
+            return `'${escapeSingleQuote(value)}'`;
         }
 
         function formatSql(sql, dbType) {
